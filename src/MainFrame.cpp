@@ -38,7 +38,7 @@ MainFrame::MainFrame()
   wxTextCtrl *textCtrl =
       new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(300, -1));
 
-  wxButton *button = new wxButton(panel, wxID_ANY, "Button", wxDefaultPosition,
+  wxButton *button = new wxButton(panel, wxID_ANY, "Start", wxDefaultPosition,
                                   wxSize(120, 35));
 
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 8);
