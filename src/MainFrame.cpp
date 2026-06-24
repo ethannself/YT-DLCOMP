@@ -1,5 +1,6 @@
 #include "../include/MainFrame.hpp"
 #include "../include/MyApp.hpp"
+#include "../include/interface.hpp"
 #include "MainFrame.hpp"
 #include <wx/event.h>
 #include <wx/msw/button.h>
@@ -35,14 +36,14 @@ MainFrame::MainFrame()
   wxStaticText *staticText =
       new wxStaticText(panel, wxID_ANY, "Enter the Google Form link");
 
-  wxTextCtrl *textCtrl =
-      new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(300, -1));
+  spreadsheetLinkEntry =
+      new wxTextCtrl(panel, wxID_FILE, "", wxDefaultPosition, wxSize(300, -1));
 
-  wxButton *button = new wxButton(panel, wxID_ANY, "Start", wxDefaultPosition,
-                                  wxSize(120, 35));
+  wxButton *button = new wxButton(panel, wxID_EXECUTE, "Start",
+                                  wxDefaultPosition, wxSize(120, 35));
 
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 8);
-  mainSizer->Add(textCtrl, 0, wxALIGN_CENTER | wxBOTTOM, 15);
+  mainSizer->Add(spreadsheetLinkEntry, 0, wxALIGN_CENTER | wxBOTTOM, 15);
   mainSizer->Add(button, 0, wxALIGN_CENTER);
 
   mainSizer->AddStretchSpacer();
@@ -54,6 +55,7 @@ MainFrame::MainFrame()
   Bind(wxEVT_MENU, &MainFrame::OnSetPath, this, ID_Path);
   Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
   Bind(wxEVT_MENU, &MainFrame::OnExit, this, wxID_EXIT);
+  Bind(wxEVT_BUTTON, &MainFrame::OnEnter, this, wxID_EXECUTE);
 }
 
 void MainFrame::OnExit(wxCommandEvent &event) { Close(true); }
@@ -76,5 +78,8 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
 
     SetStatusText("Destination: " + dlg.GetPath());
   }
+}
+void MainFrame::OnEnter(wxCommandEvent &event) {
+  request_responses(this->spreadsheetLinkEntry->GetValue().ToStdString());
 }
 MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); }
