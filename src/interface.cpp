@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -32,6 +33,18 @@ std::string executeYtDLPCommand(const char *cmd) {
   }
   return result;
 }
+std::string buildYtDlpCommand(const Entry &entry,
+                              const std::filesystem::path &destPath) {
+  int minutes = 0, seconds = 0;
+  sscanf_s(entry.timestamp.c_str(), "%d:%d", &minutes, &seconds);
+  int startSeconds = (minutes * 60 + seconds);
+  int endSeconds = startSeconds + 10;
+
+  return std::format("yt-dlp --download-sections \"*{}-{}\" -o "
+                     "\"{}/%(title)s.%(ext)s\" \"{}\"",
+                     startSeconds, endSeconds, destPath.string(), entry.link);
+}
+
 std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
   // TODO: entering api key in client.
   char *apiKey = nullptr;
