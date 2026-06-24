@@ -8,5 +8,8 @@ bool MyApp::OnInit() {
   MainFrame *frame = new MainFrame("YT-DLCPP");
   frame->Center();
   frame->Show(true);
+  AllocConsole();
+  freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
+  freopen_s((FILE **)stderr, "CONOUT$", "w", stderr);
   return true;
 }
