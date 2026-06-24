@@ -1,5 +1,5 @@
 #include "MyApp.hpp"
-#include "../include/Mainframe.hpp"
+#include "../include/MainFrame.hpp"
 #include <wx/app.h>
 #include <wx/string.h>
 
