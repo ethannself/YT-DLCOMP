@@ -5,6 +5,7 @@
 #include <vector>
 
 struct Entry {
+  std::string user;
   std::string link;
   std::string timestamp;
 };

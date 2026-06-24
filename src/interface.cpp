@@ -46,8 +46,6 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
 
     free(apiKey);
     if (response.status_code == 200) {
-      std::cout << "Body: " << response.text << std::endl;
-
       // process json here
       auto json = nlohmann::json::parse(response.text);
 
@@ -55,7 +53,9 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
       // first row is headers so start at index 1
       for (size_t i = 1; i < rows.size(); ++i) {
         auto row = rows[i];
-        Entry entry = Entry{row[1], row[2]};
+        Entry entry = Entry{row[1], row[2], row[3]};
+        std::cout << "Username: " << entry.user << " Link: " << entry.link
+                  << " Timestamp: " << entry.timestamp << std::endl;
         entries.push_back(entry);
       }
 
@@ -68,7 +68,6 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
       std::cerr << "HTTP error " << response.status_code << ": "
                 << response.text << std::endl;
     }
-    // process json here
   } else {
     std::cerr << "apiKey environment variable not set!" << std::endl;
   }

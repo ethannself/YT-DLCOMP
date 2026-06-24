@@ -2,6 +2,7 @@
 #include "../include/MyApp.hpp"
 #include "../include/interface.hpp"
 #include "MainFrame.hpp"
+#include <vector>
 #include <wx/event.h>
 #include <wx/msw/button.h>
 #include <wx/msw/checkbox.h>
@@ -80,6 +81,10 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
   }
 }
 void MainFrame::OnEnter(wxCommandEvent &event) {
-  getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString());
+  std::optional<std::vector<Entry>> optResult =
+      getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString());
+  if (optResult.has_value()) {
+    std::vector<Entry> &entries = *optResult;
+  }
 }
 MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); }
