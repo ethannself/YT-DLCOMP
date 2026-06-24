@@ -4,6 +4,7 @@
 #include <cpr/api.h>
 #include <cpr/cpr.h>
 #include <cpr/cprtypes.h>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -12,8 +13,6 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
-
-std::vector<Entry> entries;
 
 std::string executeYtDLPCommand(const char *cmd) {
   std::array<char, 128> buffer;
@@ -33,10 +32,11 @@ std::string executeYtDLPCommand(const char *cmd) {
   }
   return result;
 }
-void request_responses(std::string spreadsheetId) {
+std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
   // TODO: entering api key in client.
   char *apiKey = nullptr;
   size_t size = 0;
+  std::vector<Entry> entries;
   std::string range = "Form%20Responses%201!A:Z";
   if (_dupenv_s(&apiKey, &size, "apiKey") == 0 && apiKey != nullptr) {
 
@@ -44,6 +44,7 @@ void request_responses(std::string spreadsheetId) {
         "https://sheets.googleapis.com/v4/spreadsheets/{}/values/{}?key={}",
         spreadsheetId, range, apiKey)});
 
+    free(apiKey);
     if (response.status_code == 200) {
       std::cout << "Body: " << response.text << std::endl;
 
@@ -52,10 +53,13 @@ void request_responses(std::string spreadsheetId) {
 
       auto rows = json["values"];
       // first row is headers so start at index 1
-      for (int i = 1; i < rows.size(); ++i) {
+      for (size_t i = 1; i < rows.size(); ++i) {
         auto row = rows[i];
         Entry entry = Entry{row[1], row[2]};
+        entries.push_back(entry);
       }
+
+      return entries;
     } else if (response.status_code == 0) {
       // status 0 means the request never got through (no internet, bad URL,
       // etc.)
@@ -68,4 +72,5 @@ void request_responses(std::string spreadsheetId) {
   } else {
     std::cerr << "apiKey environment variable not set!" << std::endl;
   }
+  return std::nullopt;
 }

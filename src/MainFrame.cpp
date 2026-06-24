@@ -80,6 +80,6 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
   }
 }
 void MainFrame::OnEnter(wxCommandEvent &event) {
-  request_responses(this->spreadsheetLinkEntry->GetValue().ToStdString());
+  getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString());
 }
 MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); }

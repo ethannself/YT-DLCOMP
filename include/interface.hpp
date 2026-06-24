@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -7,7 +8,6 @@ struct Entry {
   std::string link;
   std::string timestamp;
 };
-extern std::vector<Entry> entries;
 
 std::string executeYtDLPCommand(const char *cmd);
-void request_responses(std::string spreadsheetId);
+std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId);
