@@ -4,7 +4,7 @@
 #include <wx/frame.h>
 #include <wx/wx.h>
 
-enum { ID_Path = 1 };
+enum { ID_PATH = 1, ID_API_UNSET, ID_SET_API };
 
 class MainFrame : public wxFrame {
 public:

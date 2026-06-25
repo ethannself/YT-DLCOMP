@@ -45,19 +45,17 @@ std::string buildYtDlpCommand(const Entry &entry,
                      startSeconds, endSeconds, destPath.string(), entry.link);
 }
 
-std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId) {
-  // TODO: entering api key in client.
-  char *apiKey = nullptr;
+std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
+                                               std::string apiKey) {
   size_t size = 0;
   std::vector<Entry> entries;
   std::string range = "Form%20Responses%201!A:Z";
-  if (_dupenv_s(&apiKey, &size, "apiKey") == 0 && apiKey != nullptr) {
+  if (!apiKey.empty()) {
 
     auto response = cpr::Get(cpr::Url{std::format(
         "https://sheets.googleapis.com/v4/spreadsheets/{}/values/{}?key={}",
         spreadsheetId, range, apiKey)});
 
-    free(apiKey);
     if (response.status_code == 200) {
       // process json here
       auto json = nlohmann::json::parse(response.text);
