@@ -16,6 +16,9 @@ private:
   void OnExit(wxCommandEvent &event);
   void OnAbout(wxCommandEvent &event);
   void OnEnter(wxCommandEvent &event);
-
+  void OnSetAPIKey(wxCommandEvent &event);
+  void OnLinkChanged(wxCommandEvent &event);
   wxTextCtrl *spreadsheetLinkEntry;
+
+  void UpdateStartButton();
 };

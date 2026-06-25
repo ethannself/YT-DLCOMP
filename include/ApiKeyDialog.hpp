@@ -17,4 +17,5 @@ private:
   // events
   void OnTextChanged(wxCommandEvent &event);
   void OnToggleVisibility(wxCommandEvent &event);
+  void OnOk(wxCommandEvent &event);
 };

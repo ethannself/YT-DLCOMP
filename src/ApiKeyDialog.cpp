@@ -4,6 +4,7 @@
 #include <wx/event.h>
 #include <wx/font.h>
 #include <wx/gdicmn.h>
+#include <wx/msgdlg.h>
 #include <wx/sizer.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
@@ -79,6 +80,7 @@ ApiKeyDialog::ApiKeyDialog(wxWindow *parent)
   Bind(wxEVT_TEXT, &ApiKeyDialog::OnTextChanged, this, ID_TEXT_CHANGED);
   Bind(wxEVT_BUTTON, &ApiKeyDialog::OnToggleVisibility, this,
        ID_TOGGLE_VISIBILITY);
+  Bind(wxEVT_BUTTON, &ApiKeyDialog::OnOk, this, wxID_OK);
 }
 
 void ApiKeyDialog::OnTextChanged(wxCommandEvent &event) {
@@ -118,4 +120,15 @@ void ApiKeyDialog::OnToggleVisibility(wxCommandEvent &event) {
 }
 wxString ApiKeyDialog::GetApiKey() const {
   return keyCtrl ? keyCtrl->GetValue().Trim(true).Trim(false) : wxString{};
+}
+void ApiKeyDialog::OnOk(wxCommandEvent &event) {
+  wxString key = GetApiKey();
+
+  if (key.IsEmpty()) {
+    wxMessageBox("Enter a valid API key before continuing.", "API Key Required",
+                 wxOK | wxICON_WARNING, this);
+    keyCtrl->SetFocus();
+    return;
+  }
+  EndModal(wxID_OK);
 }

@@ -5,7 +5,7 @@
 
 bool MyApp::OnInit() {
   destPath = std::filesystem::current_path();
-  MainFrame *frame = new MainFrame("YT-DLCPP");
+  MainFrame *frame = new MainFrame("YT-DLCOMP");
   frame->Center();
   frame->Show(true);
   AllocConsole();

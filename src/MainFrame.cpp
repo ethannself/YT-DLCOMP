@@ -13,7 +13,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
-
+#include <wx/window.h>
 
 MainFrame::MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Hello World", wxDefaultPosition,
@@ -57,10 +57,8 @@ MainFrame::MainFrame()
                                   wxDefaultPosition, wxSize(120, 35));
 
   // if no api key show warning and block button press
-  if (wxGetApp().apiKey.empty()) {
-    apiTextWarning->Show();
-    button->Enable(false);
-  }
+  UpdateStartButton();
+  apiTextWarning->Show(wxGetApp().apiKey.empty());
 
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 7);
   mainSizer->Add(apiTextWarning, 0, wxALIGN_CENTER | wxBOTTOM, 8);
@@ -71,13 +69,14 @@ MainFrame::MainFrame()
 
   panel->SetSizer(mainSizer);
   CreateStatusBar();
-  SetStatusText("Welcome to YT-DLCPP!");
+  SetStatusText("Welcome to YT-DLCOMP!");
 
   Bind(wxEVT_MENU, &MainFrame::OnSetPath, this, ID_PATH);
   Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
   Bind(wxEVT_MENU, &MainFrame::OnExit, this, wxID_EXIT);
   Bind(wxEVT_BUTTON, &MainFrame::OnEnter, this, wxID_EXECUTE);
   Bind(wxEVT_MENU, &MainFrame::OnSetAPIKey, this, ID_SET_API);
+  Bind(wxEVT_TEXT, &MainFrame::OnLinkChanged, this, wxID_FILE);
 }
 
 MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); };
@@ -86,7 +85,7 @@ void MainFrame::OnExit(wxCommandEvent &event) { Close(true); }
 
 void MainFrame::OnAbout(wxCommandEvent &event) {
   wxMessageBox("This is a program to download videos for the song comp",
-               "About YT-DLCPP", wxOK | wxICON_INFORMATION);
+               "About YT-DLCOMP", wxOK | wxICON_INFORMATION);
 }
 
 // called when player clicks file -> set destination folder or presses Ctrl+D.
@@ -108,9 +107,28 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
       this->spreadsheetLinkEntry->GetValue().ToStdString(), wxGetApp().apiKey);
   if (optResult.has_value()) {
     std::vector<Entry> &entries = *optResult;
+
+    for (const Entry &entry : entries) {
+      std::string command = buildYtDlpCommand(entry, wxGetApp().destPath);
+      std::cout << "YT-DLP command: " << command << std::endl;
+    }
   }
 }
 void MainFrame::OnSetAPIKey(wxCommandEvent &event) {
+  auto *apiTextWarning = FindWindow(ID_API_UNSET);
+  auto *button = FindWindow(wxID_EXECUTE);
   ApiKeyDialog dlg(this);
-  dlg.ShowModal();
+  if (dlg.ShowModal() == wxID_OK) {
+    wxGetApp().apiKey = dlg.GetApiKey();
+    apiTextWarning->Show(wxGetApp().apiKey.empty());
+    UpdateStartButton();
+  }
+}
+void MainFrame::OnLinkChanged(wxCommandEvent &event) { UpdateStartButton(); }
+
+void MainFrame::UpdateStartButton() {
+  auto *button = FindWindow(wxID_EXECUTE);
+  bool hasKey = !wxGetApp().apiKey.empty();
+  bool hasLink = !spreadsheetLinkEntry->GetValue().IsEmpty();
+  button->Enable(hasKey && hasLink);
 }
