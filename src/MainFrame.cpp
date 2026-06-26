@@ -19,9 +19,9 @@ MainFrame::MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Hello World", wxDefaultPosition,
               wxSize(800, 600)) {
   wxMenu *menuFile = new wxMenu;
-  menuFile->Append(
-      ID_PATH, "&Set Destination Folder...\tCtrl-D",
-      std::format("Current Destination: {}", wxGetApp().destPath.string()));
+  menuFile->Append(ID_PATH, "&Set Destination Folder...\tCtrl-D",
+                   std::format("Current Destination: {}",
+                               wxGetApp().settings.destPath.string()));
   menuFile->AppendSeparator();
   menuFile->Append(
       ID_SET_API, "&Set API Key...\tCtrl-T",
@@ -58,7 +58,7 @@ MainFrame::MainFrame()
 
   // if no api key show warning and block button press
   UpdateStartButton();
-  apiTextWarning->Show(wxGetApp().apiKey.empty());
+  apiTextWarning->Show(wxGetApp().settings.apiKey.empty());
 
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 7);
   mainSizer->Add(apiTextWarning, 0, wxALIGN_CENTER | wxBOTTOM, 8);
@@ -91,25 +91,29 @@ void MainFrame::OnAbout(wxCommandEvent &event) {
 // called when player clicks file -> set destination folder or presses Ctrl+D.
 void MainFrame::OnSetPath(wxCommandEvent &event) {
   wxDirDialog dlg(this, "Choose destination folder",
-                  wxGetApp().destPath.string(),
+                  wxGetApp().settings.destPath.string(),
                   wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
   if (dlg.ShowModal() == wxID_OK) {
-    wxGetApp().destPath = dlg.GetPath().ToStdString();
+    wxGetApp().settings.destPath = dlg.GetPath().ToStdString();
+    wxGetApp().settings.saveSettings();
 
-    GetMenuBar()->FindItem(ID_PATH)->SetHelp(
-        std::format("Current Destination {}", wxGetApp().destPath.string()));
+    GetMenuBar()->FindItem(ID_PATH)->SetHelp(std::format(
+        "Current Destination {}", wxGetApp().settings.destPath.string()));
 
     SetStatusText("Destination: " + dlg.GetPath());
   }
 }
 void MainFrame::OnEnter(wxCommandEvent &event) {
-  std::optional<std::vector<Entry>> optResult = getResponses(
-      this->spreadsheetLinkEntry->GetValue().ToStdString(), wxGetApp().apiKey);
+  std::optional<std::vector<Entry>> optResult =
+      getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString(),
+                   wxGetApp().settings.apiKey);
   if (optResult.has_value()) {
+    wxGetApp().settings.saveSettings();
     std::vector<Entry> &entries = *optResult;
 
     for (const Entry &entry : entries) {
-      std::string command = buildYtDlpCommand(entry, wxGetApp().destPath);
+      std::string command =
+          buildYtDlpCommand(entry, wxGetApp().settings.destPath);
       std::cout << "YT-DLP command: " << command << std::endl;
     }
   }
@@ -119,8 +123,9 @@ void MainFrame::OnSetAPIKey(wxCommandEvent &event) {
   auto *button = FindWindow(wxID_EXECUTE);
   ApiKeyDialog dlg(this);
   if (dlg.ShowModal() == wxID_OK) {
-    wxGetApp().apiKey = dlg.GetApiKey();
-    apiTextWarning->Show(wxGetApp().apiKey.empty());
+    wxGetApp().settings.apiKey = dlg.GetApiKey().ToStdString();
+    wxGetApp().settings.saveSettings();
+    apiTextWarning->Show(wxGetApp().settings.apiKey.empty());
     UpdateStartButton();
   }
 }
@@ -128,7 +133,7 @@ void MainFrame::OnLinkChanged(wxCommandEvent &event) { UpdateStartButton(); }
 
 void MainFrame::UpdateStartButton() {
   auto *button = FindWindow(wxID_EXECUTE);
-  bool hasKey = !wxGetApp().apiKey.empty();
+  bool hasKey = !wxGetApp().settings.apiKey.empty();
   bool hasLink = !spreadsheetLinkEntry->GetValue().IsEmpty();
   button->Enable(hasKey && hasLink);
 }
