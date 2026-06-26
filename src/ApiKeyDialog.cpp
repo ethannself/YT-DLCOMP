@@ -100,8 +100,8 @@ void ApiKeyDialog::OnToggleVisibility(wxCommandEvent &event) {
     style |= wxTE_PASSWORD;
 
   wxTextCtrl *newCtrl =
-      new wxTextCtrl(this, ID_TEXT_CHANGED, current, wxDefaultPosition,
-                     wxSize(340, -1), style);
+      new wxTextCtrl(this, ID_TEXT_CHANGED, current, keyCtrl->GetPosition(),
+                     keyCtrl->GetSize(), style);
 
   newCtrl->SetHint("xxxxxxxxxxxxxxxxxxxxxx");
   newCtrl->SetFocus();
