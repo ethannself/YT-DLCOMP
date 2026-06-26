@@ -13,7 +13,7 @@ bool MyApp::OnInit() {
   AllocConsole();
   freopen_s((FILE **)stdout, "CONOUT$", "w", stdout);
   freopen_s((FILE **)stderr, "CONOUT$", "w", stderr);
-  settings.LoadSettings();
+  settings = AppSettings::LoadSettings();
   MainFrame *frame = new MainFrame("YT-DLCOMP");
   frame->Center();
   frame->Show(true);
