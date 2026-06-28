@@ -18,12 +18,13 @@
 #include <wx/event.h>
 
 wxDEFINE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
-std::string
-executeYtDLPCommand(const char *cmd,
-                    std::function<void(float)> onProgress = nullptr) {
+std::string executeYtDLPCommand(
+    const char *cmd,
+    std::function<void(float, std::string)> onProgress = nullptr) {
 
   std::array<char, 256> buffer;
   std::string result;
+  std::string currentExt;
 
 #if defined(_WIN32)
   std::shared_ptr<FILE> pipe(_popen(cmd, "r"), _pclose);
@@ -35,15 +36,24 @@ executeYtDLPCommand(const char *cmd,
     throw std::runtime_error("popen() failed!");
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    std::cout << buffer.data();
+    // std::cout << buffer.data();
 
     result += buffer.data();
     if (onProgress) {
-      float pct = 0.f;
-      if (std::string line(buffer.data());
-          line.find("[download]") != std::string::npos &&
+      std::string line(buffer.data());
+      if (line.find("[download] Destination:") != std::string::npos) {
+        auto dotPos = line.rfind('.');
+        if (dotPos != std::string::npos) {
+          currentExt = line.substr(dotPos + 1);
+
+          currentExt.erase(currentExt.find_last_not_of(" \t\r\n") + 1);
+        }
+      }
+
+      float pct = -1.f;
+      if (line.find("[download]") != std::string::npos &&
           sscanf_s(line.c_str(), " [download] %f%%", &pct) == 1) {
-        onProgress(pct);
+        onProgress(pct, currentExt);
       }
     }
   }
