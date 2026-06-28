@@ -14,9 +14,15 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
+#include <wx/event.h>
 
-std::string executeYtDLPCommand(const char *cmd) {
-  std::array<char, 128> buffer;
+wxDEFINE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
+std::string
+executeYtDLPCommand(const char *cmd,
+                    std::function<void(float)> onProgress = nullptr) {
+
+  std::array<char, 256> buffer;
   std::string result;
 
 #if defined(_WIN32)
@@ -29,20 +35,36 @@ std::string executeYtDLPCommand(const char *cmd) {
     throw std::runtime_error("popen() failed!");
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    std::cout << buffer.data();
+
     result += buffer.data();
+    if (onProgress) {
+      float pct = 0.f;
+      if (std::string line(buffer.data());
+          line.find("[download]") != std::string::npos &&
+          sscanf_s(line.c_str(), " [download] %f%%", &pct) == 1) {
+        onProgress(pct);
+      }
+    }
   }
   return result;
 }
-std::string buildYtDlpCommand(const Entry &entry,
+std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath) {
   int minutes = 0, seconds = 0;
-  sscanf_s(entry.timestamp.c_str(), "%d:%d", &minutes, &seconds);
+  if (sscanf_s(entry.timestamp.c_str(), "%d:%d", &minutes, &seconds) != 2) {
+    throw std::runtime_error("Invalid timestamp");
+  }
   int startSeconds = (minutes * 60 + seconds);
   int endSeconds = startSeconds + 10;
-
-  return std::format("yt-dlp --download-sections \"*{}-{}\" -o "
-                     "\"{}/%(title)s.%(ext)s\" \"{}\"",
-                     startSeconds, endSeconds, destPath.string(), entry.link);
+  return std::format("yt-dlp --newline "
+                     "-f "
+                     "\"bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/"
+                     "bestvideo[height<=1080]+bestaudio/best[height<=1080]\" "
+                     "-o \"{}/{}.%(ext)s\" "
+                     "--postprocessor-args \"ffmpeg:-ss {} -t 10 -c copy\" "
+                     "\"{}\" 2>&1",
+                     destPath.string(), index, startSeconds, entry.link);
 }
 
 std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
@@ -64,10 +86,14 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
       // first row is headers so start at index 1
       for (size_t i = 1; i < rows.size(); ++i) {
         auto row = rows[i];
+        if (row.size() < 4) {
+          throw std::runtime_error("Invalid row!");
+        }
+        // TODO: input validation on rows
         Entry entry = Entry{row[1], row[2], row[3]};
         std::cout << "Username: " << entry.user << " Link: " << entry.link
                   << " Timestamp: " << entry.timestamp << std::endl;
-        entries.push_back(entry);
+        entries.emplace_back(entry);
       }
 
       return entries;
