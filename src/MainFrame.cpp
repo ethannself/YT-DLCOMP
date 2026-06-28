@@ -4,11 +4,14 @@
 #include "ApiKeyDialog.hpp"
 #include "MainFrame.hpp"
 #include <iostream>
+#include <stdexcept>
+#include <thread>
 #include <vector>
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/colour.h>
 #include <wx/event.h>
+#include <wx/gauge.h>
 #include <wx/gdicmn.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -56,6 +59,8 @@ MainFrame::MainFrame()
   wxButton *button = new wxButton(panel, wxID_EXECUTE, "Start",
                                   wxDefaultPosition, wxSize(120, 35));
 
+  gauge = new wxGauge(panel, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1));
+  gauge->SetValue(0);
   // if no api key show warning and block button press
   UpdateStartButton();
   apiTextWarning->Show(wxGetApp().settings.apiKey.empty());
@@ -63,7 +68,8 @@ MainFrame::MainFrame()
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 7);
   mainSizer->Add(apiTextWarning, 0, wxALIGN_CENTER | wxBOTTOM, 8);
   mainSizer->Add(spreadsheetLinkEntry, 0, wxALIGN_CENTER | wxBOTTOM, 15);
-  mainSizer->Add(button, 0, wxALIGN_CENTER);
+  mainSizer->Add(button, 0, wxALIGN_CENTER | wxBOTTOM, 15);
+  mainSizer->Add(gauge, 0, wxALIGN_CENTER);
 
   mainSizer->AddStretchSpacer();
 
@@ -77,6 +83,7 @@ MainFrame::MainFrame()
   Bind(wxEVT_BUTTON, &MainFrame::OnEnter, this, wxID_EXECUTE);
   Bind(wxEVT_MENU, &MainFrame::OnSetAPIKey, this, ID_SET_API);
   Bind(wxEVT_TEXT, &MainFrame::OnLinkChanged, this, wxID_FILE);
+  Bind(EVT_DOWNLOAD_PROGRESS, &MainFrame::OnDownloadProgress, this);
 }
 
 MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); };
@@ -104,18 +111,46 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
   }
 }
 void MainFrame::OnEnter(wxCommandEvent &event) {
-  std::optional<std::vector<Entry>> optResult =
-      getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString(),
-                   wxGetApp().settings.apiKey);
-  if (optResult.has_value()) {
-    wxGetApp().settings.saveSettings();
-    std::vector<Entry> &entries = *optResult;
+  try {
+    std::optional<std::vector<Entry>> optResult =
+        getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString(),
+                     wxGetApp().settings.apiKey);
+    if (optResult.has_value()) {
+      wxGetApp().settings.saveSettings();
+      std::vector<Entry> &entries = *optResult;
+      auto destPath = wxGetApp().settings.destPath;
+      size_t total = entries.size();
 
-    for (const Entry &entry : entries) {
-      std::string command =
-          buildYtDlpCommand(entry, wxGetApp().settings.destPath);
-      std::cout << "YT-DLP command: " << command << std::endl;
+      std::thread([entries, destPath, total, this]() {
+        for (size_t i = 0; i < entries.size(); ++i) {
+          try {
+            std::string command =
+                buildYtDlpCommand(i + 1, entries[i], destPath);
+            std::string res = executeYtDLPCommand(
+                command.c_str(), [&](float pct, std::string ext) {
+                  auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
+                  if (pct >= 0.0)
+                    evt->SetInt(static_cast<int>(pct));
+                  if (!ext.empty())
+                    evt->SetString(wxString{
+                        std::format("Downloading file {}/{} {}.{} {}%/100%",
+                                    i + 1, entries.size(), i + 1, ext, pct)});
+
+                  wxQueueEvent(this, evt);
+                });
+          } catch (std::runtime_error &err) {
+            std::cout << "[Error] buildYtDlpCommand: " << err.what()
+                      << std::endl;
+          }
+        }
+
+        auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
+        evt->SetInt(100);
+        wxQueueEvent(this, evt);
+      }).detach();
     }
+  } catch (std::runtime_error &err) {
+    std::cout << "[Error] getResponses: " << err.what() << std::endl;
   }
 }
 void MainFrame::OnSetAPIKey(wxCommandEvent &event) {
@@ -136,4 +171,11 @@ void MainFrame::UpdateStartButton() {
   bool hasKey = !wxGetApp().settings.apiKey.empty();
   bool hasLink = !spreadsheetLinkEntry->GetValue().IsEmpty();
   button->Enable(hasKey && hasLink);
+}
+
+void MainFrame::OnDownloadProgress(wxThreadEvent &event) {
+  gauge->SetValue(event.GetInt());
+  if (!event.GetString().empty()) {
+    std::cout << event.GetString() << std::endl;
+  }
 }
