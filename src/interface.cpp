@@ -111,12 +111,15 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
       // status 0 means the request never got through (no internet, bad URL,
       // etc.)
       std::cerr << "Request failed: " << response.error.message << std::endl;
+      throw std::runtime_error("Internal Server Error");
     } else {
       std::cerr << "HTTP error " << response.status_code << ": "
                 << response.text << std::endl;
+      throw std::runtime_error("Invalid Sheets Link!");
     }
   } else {
     std::cerr << "apiKey environment variable not set!" << std::endl;
+    throw std::runtime_error("Invalid API Key!");
   }
   return std::nullopt;
 }

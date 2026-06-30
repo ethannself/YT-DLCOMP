@@ -3,6 +3,7 @@
 #include <wx/event.h>
 #include <wx/frame.h>
 #include <wx/gauge.h>
+#include <wx/stattext.h>
 #include <wx/wx.h>
 
 enum { ID_PATH = 1, ID_API_UNSET, ID_SET_API };
@@ -21,6 +22,9 @@ private:
   void OnLinkChanged(wxCommandEvent &event);
   void OnDownloadProgress(wxThreadEvent &event);
   wxTextCtrl *spreadsheetLinkEntry;
+  wxStaticText *linkError;
   wxGauge *gauge;
+  wxStaticText *downloadLabel;
   void UpdateStartButton();
+  void DisplayError(std::string message, size_t durationSeconds);
 };

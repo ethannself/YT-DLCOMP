@@ -54,7 +54,7 @@ AppSettings AppSettings::LoadSettings() {
       settings.sheetsLink = value;
   }
   std::cout << std::format(
-      "Loaded settings: apiKey={}, destPath={}, sheetsLink={}", settings.apiKey,
-      settings.destPath.string(), settings.sheetsLink);
+      "Loaded settings: apiKey={}, destPath={}, sheetsLink={}\n",
+      settings.apiKey, settings.destPath.string(), settings.sheetsLink);
   return settings;
 }

@@ -3,6 +3,7 @@
 #include "../include/interface.hpp"
 #include "ApiKeyDialog.hpp"
 #include "MainFrame.hpp"
+#include <chrono>
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -56,8 +57,25 @@ MainFrame::MainFrame()
 
   spreadsheetLinkEntry =
       new wxTextCtrl(panel, wxID_FILE, "", wxDefaultPosition, wxSize(300, -1));
-  wxButton *button = new wxButton(panel, wxID_EXECUTE, "Start",
-                                  wxDefaultPosition, wxSize(120, 35));
+  linkError =
+      new wxStaticText(panel, wxID_ANY, "", wxDefaultPosition, wxSize(400, -1),
+                       wxALIGN_CENTER_HORIZONTAL | wxST_NO_AUTORESIZE);
+  linkError->SetForegroundColour(wxColour{200, 0, 0});
+  wxBoxSizer *buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+
+  wxButton *startButton = new wxButton(panel, wxID_EXECUTE, "Start",
+                                       wxDefaultPosition, wxSize(120, 35));
+  wxButton *closeButton = new wxButton(panel, wxID_ANY, "Close",
+                                       wxDefaultPosition, wxSize(120, 35));
+
+  closeButton->Bind(wxEVT_BUTTON,
+                    [this](wxCommandEvent &event) { Close(true); });
+
+  buttonSizer->Add(startButton, wxSizerFlags().Border(wxRIGHT, 10));
+  buttonSizer->Add(closeButton);
+  downloadLabel =
+      new wxStaticText(panel, wxID_ANY, "", wxDefaultPosition, wxSize(400, -1),
+                       wxALIGN_CENTER_HORIZONTAL | wxST_NO_AUTORESIZE);
 
   gauge = new wxGauge(panel, wxID_ANY, 100, wxDefaultPosition, wxSize(300, -1));
   gauge->SetValue(0);
@@ -68,7 +86,10 @@ MainFrame::MainFrame()
   mainSizer->Add(staticText, 0, wxALIGN_CENTER | wxBOTTOM, 7);
   mainSizer->Add(apiTextWarning, 0, wxALIGN_CENTER | wxBOTTOM, 8);
   mainSizer->Add(spreadsheetLinkEntry, 0, wxALIGN_CENTER | wxBOTTOM, 15);
-  mainSizer->Add(button, 0, wxALIGN_CENTER | wxBOTTOM, 15);
+  mainSizer->Add(linkError, 0, wxALIGN_CENTER | wxBOTTOM, 2);
+  // mainSizer->Add(startButton, 0, wxALIGN_CENTER | wxBOTTOM, 15);
+  mainSizer->Add(buttonSizer, 0, wxALIGN_CENTER, 15);
+  mainSizer->Add(downloadLabel, 0, wxALIGN_CENTER | wxBOTTOM, 6);
   mainSizer->Add(gauge, 0, wxALIGN_CENTER);
 
   mainSizer->AddStretchSpacer();
@@ -111,10 +132,17 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
   }
 }
 void MainFrame::OnEnter(wxCommandEvent &event) {
+  std::optional<std::vector<Entry>> optResult;
   try {
-    std::optional<std::vector<Entry>> optResult =
+    optResult =
         getResponses(this->spreadsheetLinkEntry->GetValue().ToStdString(),
                      wxGetApp().settings.apiKey);
+
+  } catch (std::runtime_error &err) {
+    DisplayError(err.what(), 3);
+    return;
+  }
+  try {
     if (optResult.has_value()) {
       wxGetApp().settings.saveSettings();
       std::vector<Entry> &entries = *optResult;
@@ -133,7 +161,7 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
                     evt->SetInt(static_cast<int>(pct));
                   if (!ext.empty())
                     evt->SetString(wxString{
-                        std::format("Downloading file {}/{} {}.{} {}%/100%",
+                        std::format("File {}/{} Downloading:  {}.{} {}%/100%",
                                     i + 1, entries.size(), i + 1, ext, pct)});
 
                   wxQueueEvent(this, evt);
@@ -146,6 +174,9 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
 
         auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
         evt->SetInt(100);
+        evt->SetString("Done!");
+        SetStatusText(std::format("Successfully downloaded videos to \"{}\"!",
+                                  destPath.string()));
         wxQueueEvent(this, evt);
       }).detach();
     }
@@ -177,5 +208,17 @@ void MainFrame::OnDownloadProgress(wxThreadEvent &event) {
   gauge->SetValue(event.GetInt());
   if (!event.GetString().empty()) {
     std::cout << event.GetString() << std::endl;
+    this->downloadLabel->SetLabelText(event.GetString());
   }
+}
+void MainFrame::DisplayError(std::string message, size_t durationSeconds) {
+  linkError->SetLabelText(std::format("Error: {}", message));
+  wxStaticText *errLabel = linkError; // capture by value, not `this`
+
+  std::thread([errLabel, durationSeconds]() {
+    std::this_thread::sleep_for(std::chrono::seconds(durationSeconds));
+    if (errLabel) {
+      errLabel->CallAfter([errLabel]() { errLabel->SetLabelText(""); });
+    }
+  }).detach();
 }
