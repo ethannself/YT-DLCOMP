@@ -25,6 +25,7 @@ private:
   wxStaticText *linkError;
   wxGauge *gauge;
   wxStaticText *downloadLabel;
+  wxStaticText *apiTextWarning;
   void UpdateStartButton();
   void DisplayError(std::string message, size_t durationSeconds);
 };
