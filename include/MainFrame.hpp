@@ -6,7 +6,7 @@
 #include <wx/stattext.h>
 #include <wx/wx.h>
 
-enum { ID_PATH = 1, ID_API_UNSET, ID_SET_API };
+enum { ID_PATH = wxID_HIGHEST + 1, ID_API_UNSET, ID_SET_API };
 
 class MainFrame : public wxFrame {
 public:
