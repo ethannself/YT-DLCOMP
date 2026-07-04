@@ -86,3 +86,5 @@ compile_flags.txt
 build/
 # env
 .env
+# vscode settings that only apply to my workspace
+.vscode/settings.json
