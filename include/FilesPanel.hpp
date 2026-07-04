@@ -1,3 +1,4 @@
+#include <wx/grid.h>
 #include <wx/panel.h>
 #include <wx/window.h>
 
@@ -8,4 +9,7 @@ public:
 
 private:
   void BuildUI();
+  wxGrid *grid = nullptr;
+  void OnSize(wxSizeEvent &event);
+  void ResizeGridColumns();
 };

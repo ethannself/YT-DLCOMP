@@ -8,6 +8,7 @@
 #include <wx/event.h>
 #include <wx/thread.h>
 
+const int COLUMN_COUNT = 4; // user, link, timestamp, file location
 struct Entry {
   std::string user;
   std::string link;
