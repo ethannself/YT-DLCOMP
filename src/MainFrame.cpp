@@ -1,5 +1,6 @@
 #include "MainFrame.hpp"
 #include "ApiKeyDialog.hpp"
+#include "FilesPanel.hpp"
 #include "MyApp.hpp"
 #include "interface.hpp"
 #include <chrono>
@@ -14,6 +15,7 @@
 #include <wx/event.h>
 #include <wx/gauge.h>
 #include <wx/gdicmn.h>
+#include <wx/notebook.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -42,7 +44,10 @@ MainFrame::MainFrame()
   menuBar->Append(menuHelp, "&Help");
 
   SetMenuBar(menuBar);
-  wxPanel *panel = new wxPanel(this);
+
+  wxNotebook *notebook = new wxNotebook(this, wxID_ANY, wxDefaultPosition,
+                                        wxDefaultSize, wxNB_DEFAULT);
+  wxPanel *panel = new wxPanel(notebook);
 
   wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
 
@@ -96,6 +101,13 @@ MainFrame::MainFrame()
   mainSizer->AddStretchSpacer();
 
   panel->SetSizer(mainSizer);
+  FilesPanel *fp = new FilesPanel(notebook);
+  notebook->AddPage(panel, "Home");
+  notebook->AddPage(fp, "Files");
+
+  wxBoxSizer *frameSizer = new wxBoxSizer(wxVERTICAL);
+  frameSizer->Add(notebook, 1, wxEXPAND);
+  SetSizer(frameSizer);
   CreateStatusBar();
   SetStatusText("Welcome to YT-DLCOMP!");
 
