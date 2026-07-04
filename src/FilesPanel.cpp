@@ -1,5 +1,6 @@
 #include "FilesPanel.hpp"
 #include "interface.hpp"
+#include <wx/colour.h>
 #include <wx/event.h>
 #include <wx/font.h>
 #include <wx/gdicmn.h>
@@ -7,6 +8,7 @@
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 
+enum { COL_SUBMITTER = 0, COL_URL, COL_TIMESTAMP, COL_FILEPATH };
 FilesPanel::FilesPanel() : wxPanel(nullptr) {}
 FilesPanel::FilesPanel(wxWindow *parent) : wxPanel(parent) { BuildUI(); }
 
@@ -15,21 +17,33 @@ void FilesPanel::BuildUI() {
   wxStaticText *text =
       new wxStaticText(this, wxID_ANY, "Files", wxDefaultPosition,
                        wxDefaultSize, wxALIGN_CENTER);
+  wxStaticText *caution =
+      new wxStaticText(this, wxID_ANY,
+                       "Caution: This list will not save when closing the app, "
+                       "but your files will still be there.",
+                       wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER);
+  // header font
   wxFont font = text->GetFont();
   font.SetWeight(wxFONTWEIGHT_BOLD);
   font = font.Scale(1.5f);
   text->SetFont(font);
+  // caution text font
+  font = caution->GetFont();
+  font = font.Scale(0.9f);
+  caution->SetFont(font);
+  caution->SetForegroundColour(wxColour(238, 139, 0));
   grid = new wxGrid(this, wxID_ANY, wxPoint(0, 0), wxSize(400, 300));
   grid->ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_DEFAULT);
   grid->EnableEditing(false);
   grid->CreateGrid(0, COLUMN_COUNT);
-  grid->AppendRows(3, true);
+  // grid->AppendRows(3, true);
   grid->SetColLabelValue(0, "Submitter");
   grid->SetColLabelValue(1, "Video URL");
   grid->SetColLabelValue(2, "Timestamp");
   grid->SetColLabelValue(3, "File Path");
 
   mainSizer->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
+  mainSizer->Add(caution, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 10);
   mainSizer->Add(grid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
   this->SetSizer(mainSizer);
 
@@ -63,4 +77,13 @@ void FilesPanel::ResizeGridColumns() {
     grid->SetColSize(i, w);
     assigned += w;
   }
+}
+void FilesPanel::AddFile(const Entry &e, const std::string &path) {
+  grid->AppendRows(1);
+  int newRow = grid->GetNumberRows() - 1;
+
+  grid->SetCellValue(newRow, COL_SUBMITTER, e.user);
+  grid->SetCellValue(newRow, COL_URL, e.link);
+  grid->SetCellValue(newRow, COL_TIMESTAMP, e.timestamp);
+  grid->SetCellValue(newRow, COL_FILEPATH, path);
 }

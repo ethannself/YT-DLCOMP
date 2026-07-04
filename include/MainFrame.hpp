@@ -1,10 +1,12 @@
 #pragma once
+#include "FilesPanel.hpp"
 #include <wx/app.h>
 #include <wx/event.h>
 #include <wx/frame.h>
 #include <wx/gauge.h>
 #include <wx/stattext.h>
 #include <wx/wx.h>
+
 
 enum { ID_PATH = wxID_HIGHEST + 1, ID_API_UNSET, ID_SET_API };
 
@@ -26,6 +28,7 @@ private:
   wxGauge *gauge;
   wxStaticText *downloadLabel;
   wxStaticText *apiTextWarning;
+  FilesPanel *filesPanel;
   void UpdateStartButton();
   void DisplayError(std::string message, size_t durationSeconds);
 };

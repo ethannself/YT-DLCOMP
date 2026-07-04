@@ -1,8 +1,8 @@
 #include "MainFrame.hpp"
 #include "ApiKeyDialog.hpp"
-#include "FilesPanel.hpp"
 #include "MyApp.hpp"
 #include "interface.hpp"
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -101,9 +101,9 @@ MainFrame::MainFrame()
   mainSizer->AddStretchSpacer();
 
   panel->SetSizer(mainSizer);
-  FilesPanel *fp = new FilesPanel(notebook);
+  filesPanel = new FilesPanel(notebook);
   notebook->AddPage(panel, "Home");
-  notebook->AddPage(fp, "Files");
+  notebook->AddPage(filesPanel, "Files");
 
   wxBoxSizer *frameSizer = new wxBoxSizer(wxVERTICAL);
   frameSizer->Add(notebook, 1, wxEXPAND);
@@ -181,6 +181,10 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
 
                   wxQueueEvent(this, evt);
                 });
+            const Entry &entry = entries[i];
+            filesPanel->AddFile(
+                entry, std::format("{}\\{}.{}", destPath.string(), i, "mp4"));
+            // TODO: support other video types?
           } catch (std::runtime_error &err) {
             std::cout << "[Error] buildYtDlpCommand: " << err.what()
                       << std::endl;
@@ -199,6 +203,7 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     }
   } catch (std::runtime_error &err) {
     std::cout << "[Error] getResponses: " << err.what() << std::endl;
+    DisplayError(err.what(), 3);
   }
 }
 // upon clicking Save Key at file -> set api key
@@ -225,6 +230,12 @@ void MainFrame::UpdateStartButton() {
 }
 // updates download gauge progress
 void MainFrame::OnDownloadProgress(wxThreadEvent &event) {
+  // annoying hacky workaround to disable the gauge animation
+  // (only works up to 99% as values over 100 will hit an assert..)
+  if (event.GetInt() <= 99) {
+    gauge->SetValue(event.GetInt() + 1);
+  }
+  //
   gauge->SetValue(event.GetInt());
   if (!event.GetString().empty()) {
     std::cout << event.GetString() << std::endl;
