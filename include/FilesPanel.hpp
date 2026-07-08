@@ -15,4 +15,5 @@ private:
   wxGrid *grid = nullptr;
   void OnSize(wxSizeEvent &event);
   void ResizeGridColumns();
+  void OnCellDoubleClick(wxGridEvent &e);
 };

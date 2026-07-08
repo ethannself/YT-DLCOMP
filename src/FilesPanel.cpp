@@ -1,9 +1,13 @@
 #include "FilesPanel.hpp"
 #include "interface.hpp"
+#include <filesystem>
+#include <iostream>
 #include <wx/colour.h>
 #include <wx/event.h>
 #include <wx/font.h>
 #include <wx/gdicmn.h>
+#include <wx/generic/grid.h>
+#include <wx/grid.h>
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
@@ -48,6 +52,7 @@ void FilesPanel::BuildUI() {
   this->SetSizer(mainSizer);
 
   Bind(wxEVT_SIZE, &FilesPanel::OnSize, this);
+  grid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &FilesPanel::OnCellDoubleClick, this);
   CallAfter([this]() {
     wxSizeEvent dummy;
     this->OnSize(dummy);
@@ -86,4 +91,12 @@ void FilesPanel::AddFile(const Entry &e, const std::string &path) {
   grid->SetCellValue(newRow, COL_URL, e.link);
   grid->SetCellValue(newRow, COL_TIMESTAMP, e.timestamp);
   grid->SetCellValue(newRow, COL_FILEPATH, path);
+}
+
+void FilesPanel::OnCellDoubleClick(wxGridEvent &e) {
+  int row = e.GetRow();
+  std::filesystem::path link = std::filesystem::path{
+      grid->GetCellValue(row, COL_FILEPATH).ToStdString()};
+  std::cout << std::format("Clicked row {}\nPath: {}", row, link.string())
+            << std::endl;
 }
