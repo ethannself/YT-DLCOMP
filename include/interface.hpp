@@ -4,6 +4,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <wx/event.h>
 #include <wx/thread.h>
@@ -16,7 +17,7 @@ struct Entry {
 };
 
 std::string
-executeYtDLPCommand(const char *cmd,
+executeYtDLPCommand(const char *cmd, std::string_view filename,
                     std::function<void(float, std::string)> onProgress);
 std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath);

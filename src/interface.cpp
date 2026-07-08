@@ -11,6 +11,8 @@
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <optional>
+#include <regex>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,8 +20,24 @@
 #include <wx/event.h>
 
 wxDEFINE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
+
+static bool isValidYoutubeURL(const std::string &url) {
+  static const std::regex youtube_regex(
+      R"(^(?:https?:\/\/)?(?:www\.)?(?:(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/))|(?:youtu\.be\/))([a-zA-Z0-9_-]{11})(?:[&?].*)?$)");
+  return std::regex_match(url.begin(), url.end(), youtube_regex);
+}
+std::optional<std::string> getFileExtension(const std::string &line) {
+  static const std::regex fileRegex(R"(\b[\w.-]+\.([A-Za-z0-9]+)\b)");
+
+  std::smatch match;
+  if (std::regex_search(line, match, fileRegex))
+    return match[1].str();
+
+  return std::nullopt;
+}
+
 std::string executeYtDLPCommand(
-    const char *cmd,
+    const char *cmd, std::string_view filename,
     std::function<void(float, std::string)> onProgress = nullptr) {
 
   std::array<char, 256> buffer;
@@ -36,24 +54,31 @@ std::string executeYtDLPCommand(
     throw std::runtime_error("popen() failed!");
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    // std::cout << buffer.data();
+    std::cout << buffer.data();
 
     result += buffer.data();
     if (onProgress) {
       std::string line(buffer.data());
-      if (line.find("[download] Destination:") != std::string::npos) {
-        auto dotPos = line.rfind('.');
-        if (dotPos != std::string::npos) {
-          currentExt = line.substr(dotPos + 1);
 
-          currentExt.erase(currentExt.find_last_not_of(" \t\r\n") + 1);
+      if (line.find("Destination:") != std::string::npos ||
+          line.find("Merging formats into") != std::string::npos) {
+        auto res = getFileExtension(line);
+        if (res.has_value()) {
+          currentExt = res.value();
         }
       }
-
       float pct = -1.f;
       if (line.find("[download]") != std::string::npos &&
-          sscanf_s(line.c_str(), " [download] %f%%", &pct) == 1) {
+          sscanf(line.c_str(), " [download] %f%%", &pct) == 1) {
         onProgress(pct, currentExt);
+      } else if (line.starts_with("[download]") &&
+                 line.find("has already been downloaded") !=
+                     std::string::npos) {
+        auto res = getFileExtension(line);
+        if (res.has_value()) {
+          currentExt = res.value();
+        }
+        onProgress(100.0, currentExt);
       }
     }
   }
@@ -81,7 +106,7 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
                                                std::string apiKey) {
   size_t size = 0;
   std::vector<Entry> entries;
-  std::string range = "Form%20Responses%201!A:Z";
+  static const std::string range = "Form%20Responses%201!A:Z";
   if (!apiKey.empty()) {
 
     auto response = cpr::Get(cpr::Url{std::format(
@@ -100,10 +125,13 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
           throw std::runtime_error("Invalid row!");
         }
         // TODO: input validation on rows
-        Entry entry = Entry{row[1], row[2], row[3]};
-        std::cout << "Username: " << entry.user << " Link: " << entry.link
-                  << " Timestamp: " << entry.timestamp << std::endl;
-        entries.emplace_back(entry);
+
+        if (isValidYoutubeURL(row[2])) {
+          Entry entry = Entry{row[1], row[2], row[3]};
+          std::cout << "Username: " << entry.user << " Link: " << entry.link
+                    << " Timestamp: " << entry.timestamp << std::endl;
+          entries.emplace_back(entry);
+        }
       }
 
       return entries;

@@ -2,7 +2,6 @@
 #include "ApiKeyDialog.hpp"
 #include "MyApp.hpp"
 #include "interface.hpp"
-#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
@@ -23,7 +22,7 @@
 
 MainFrame::MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Hello World", wxDefaultPosition,
-              wxSize(800, 600)) {
+              wxSize(950, 700)) {
   auto &settings = wxGetApp().settings;
   wxMenu *menuFile = new wxMenu;
   menuFile->Append(
@@ -95,8 +94,8 @@ MainFrame::MainFrame()
   mainSizer->Add(linkError, 0, wxALIGN_CENTER | wxBOTTOM, 2);
   // mainSizer->Add(startButton, 0, wxALIGN_CENTER | wxBOTTOM, 15);
   mainSizer->Add(buttonSizer, 0, wxALIGN_CENTER, 15);
-  mainSizer->Add(downloadLabel, 0, wxALIGN_CENTER | wxBOTTOM, 6);
-  mainSizer->Add(gauge, 0, wxALIGN_CENTER);
+  mainSizer->Add(downloadLabel, 0, wxALIGN_CENTER | wxTOP, 30);
+  mainSizer->Add(gauge, 0, wxALIGN_CENTER | wxTOP, 6);
 
   mainSizer->AddStretchSpacer();
 
@@ -160,7 +159,7 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     if (optResult.has_value()) {
       settings.saveSettings();
       std::vector<Entry> &entries = *optResult;
-      auto destPath = settings.destPath;
+      auto &destPath = settings.destPath;
       size_t total = entries.size();
 
       std::thread([entries, destPath, total, this]() {
@@ -169,8 +168,8 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
             std::string command =
                 buildYtDlpCommand(i + 1, entries[i], destPath);
             executeYtDLPCommand(
-                command.c_str(),
-                [this, entries, i](float pct, std::string ext) {
+                command.c_str(), std::to_string(i),
+                [this, &entries, &i](float pct, std::string ext) {
                   auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
                   if (pct >= 0.0)
                     evt->SetInt(static_cast<int>(pct));
@@ -183,7 +182,8 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
                 });
             const Entry &entry = entries[i];
             filesPanel->AddFile(
-                entry, std::format("{}\\{}.{}", destPath.string(), i, "mp4"));
+                entry,
+                std::format("{}\\{}.{}", destPath.string(), i + 1, "mp4"));
             // TODO: support other video types?
           } catch (std::runtime_error &err) {
             std::cout << "[Error] buildYtDlpCommand: " << err.what()
@@ -238,7 +238,7 @@ void MainFrame::OnDownloadProgress(wxThreadEvent &event) {
   //
   gauge->SetValue(event.GetInt());
   if (!event.GetString().empty()) {
-    std::cout << event.GetString() << std::endl;
+    // std::cout << event.GetString() << std::endl;
     this->downloadLabel->SetLabelText(event.GetString());
   }
 }
