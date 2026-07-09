@@ -11,7 +11,9 @@
 #include <wx/scrolwin.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
-
+#ifdef _WIN32
+#include <windows.h>
+#endif
 enum { COL_SUBMITTER = 0, COL_URL, COL_TIMESTAMP, COL_FILEPATH };
 FilesPanel::FilesPanel() : wxPanel(nullptr) {}
 FilesPanel::FilesPanel(wxWindow *parent) : wxPanel(parent) { BuildUI(); }
@@ -93,10 +95,21 @@ void FilesPanel::AddFile(const Entry &e, const std::string &path) {
   grid->SetCellValue(newRow, COL_FILEPATH, path);
 }
 
+static void openFile(const std::filesystem::path &path) {
+#ifdef _WIN32
+  ShellExecuteW(NULL, L"open", path.c_str(), NULL, NULL, SW_SHOWNORMAL);
+#else
+#ifdef __APPLE__
+  std::string cmd = "open \"" + path.string() + "\"";
+#else
+  std::string cmd = "xdg-open \"" + path.string() + "\"";
+#endif
+  system(cmd.c_str());
+#endif
+}
 void FilesPanel::OnCellDoubleClick(wxGridEvent &e) {
   int row = e.GetRow();
-  std::filesystem::path link = std::filesystem::path{
-      grid->GetCellValue(row, COL_FILEPATH).ToStdString()};
-  std::cout << std::format("Clicked row {}\nPath: {}", row, link.string())
-            << std::endl;
+  std::string link = grid->GetCellValue(row, COL_FILEPATH).ToStdString();
+  std::cout << std::format("Clicked row {}\nPath: {}", row, link) << std::endl;
+  openFile(link);
 }
