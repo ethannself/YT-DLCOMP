@@ -158,9 +158,10 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
   try {
     if (optResult.has_value()) {
       settings.saveSettings();
-      std::vector<Entry> &entries = *optResult;
-      auto &destPath = settings.destPath;
-      size_t total = entries.size();
+      this->filesPanel->SetEntries(optResult.value());
+      const std::vector<Entry> &entries = this->filesPanel->GetEntries();
+      const auto &destPath = settings.destPath;
+      const size_t total = entries.size();
 
       std::thread([entries, destPath, total, this]() {
         for (size_t i = 0; i < entries.size(); ++i) {
