@@ -159,33 +159,37 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     if (optResult.has_value()) {
       settings.saveSettings();
       this->filesPanel->SetEntries(optResult.value());
-      const std::vector<Entry> &entries = this->filesPanel->GetEntries();
       const auto &destPath = settings.destPath;
-      const size_t total = entries.size();
+      const size_t total = this->filesPanel->GetEntries().size();
 
-      std::thread([entries, destPath, total, this]() {
-        for (size_t i = 0; i < entries.size(); ++i) {
+      std::thread([destPath, total, this]() {
+        for (size_t i = 0; i < total; ++i) {
           try {
-            std::string command =
-                buildYtDlpCommand(i + 1, entries[i], destPath);
+            Entry entry = this->filesPanel->GetEntries()[i];
+
+            std::string command = buildYtDlpCommand(i + 1, entry, destPath);
             executeYtDLPCommand(
                 command.c_str(), std::to_string(i),
-                [this, &entries, &i](float pct, std::string ext) {
+                [this, i, total](float pct, std::string ext) {
                   auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
                   if (pct >= 0.0)
                     evt->SetInt(static_cast<int>(pct));
                   if (!ext.empty())
                     evt->SetString(wxString{
                         std::format("File {}/{} Downloading:  {}.{} {}%/100%",
-                                    i + 1, entries.size(), i + 1, ext, pct)});
-
+                                    i + 1, total, i + 1, ext, pct)});
                   wxQueueEvent(this, evt);
                 });
-            const Entry &entry = entries[i];
-            filesPanel->AddFile(
-                entry,
+
+            auto path = std::filesystem::path(
                 std::format("{}\\{}.{}", destPath.string(), i + 1, "mp4"));
-            // TODO: support other video types?
+
+            wxTheApp->CallAfter([this, i, path]() {
+              this->filesPanel->SetEntryPath(i, path);
+              this->filesPanel->AddFile(this->filesPanel->GetEntries()[i],
+                                        path.string());
+            });
+
           } catch (std::runtime_error &err) {
             std::cout << "[Error] buildYtDlpCommand: " << err.what()
                       << std::endl;

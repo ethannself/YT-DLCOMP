@@ -113,3 +113,8 @@ void FilesPanel::OnCellDoubleClick(wxGridEvent &e) {
   std::cout << std::format("Clicked row {}\nPath: {}", row, link) << std::endl;
   openFile(link);
 }
+void FilesPanel::SetEntryPath(size_t index, const std::filesystem::path &path) {
+  if (index < entries.size()) {
+    entries[index].path = path;
+  }
+}
