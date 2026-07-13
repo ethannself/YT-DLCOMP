@@ -26,7 +26,7 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
                                                std::string apiKey);
 // std::string buildEntryLabelCommand(const Entry &entry);
 void AddEntryLabels(const std::vector<Entry> &entries);
-
+void CombineEntries(const std::vector<Entry> &entries);
 int executeffmpegCommand(const std::string &command);
 
 wxDECLARE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);

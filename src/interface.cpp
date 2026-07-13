@@ -53,7 +53,7 @@ std::string executeYtDLPCommand(
 #endif
 
   if (!pipe)
-    throw std::runtime_error("popen() failed!");
+    throw std::runtime_error("[executeYtDLP] popen() failed!");
 
   while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
     std::cout << buffer.data();
@@ -90,20 +90,52 @@ std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath) {
   int minutes = 0, seconds = 0;
   if (sscanf_s(entry.timestamp.c_str(), "%d:%d", &minutes, &seconds) != 2) {
-    throw std::runtime_error("Invalid timestamp");
+    throw std::runtime_error("[buildYtDLP] Invalid timestamp");
   }
   int startSeconds = (minutes * 60 + seconds);
   int endSeconds = startSeconds + 10;
-  return std::format("yt-dlp --newline "
-                     "-f "
-                     "\"bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/"
-                     "bestvideo[height<=1080]+bestaudio/best[height<=1080]\" "
-                     "-o \"{}/{}.%(ext)s\" "
-                     "--postprocessor-args \"ffmpeg:-ss {} -t 10 -c copy\" "
-                     "\"{}\" 2>&1",
-                     destPath.string(), index, startSeconds, entry.link);
+  return std::format(
+      "yt-dlp --newline "
+      "-f "
+      "\"bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/"
+      "bestvideo[height<=1080]+bestaudio/best[height<=1080]\" "
+      "-o \"{}/{}.%(ext)s\" "
+      "--postprocessor-args \"ffmpeg:-ss {} -t 10 -c:v libx264 -c:a aac\" "
+      "\"{}\" 2>&1",
+      destPath.string(), index, startSeconds, entry.link);
 }
+std::string sanitizeYoutubeURL(std::string_view url) {
+  std::string clean_url;
+  if (url.find("youtu.be/") != std::string_view::npos) {
+    size_t id_pos = url.find("youtu.be/") + 9;
 
+    size_t query_pos = url.find_first_of("?&", id_pos);
+    std::string video_id =
+        (query_pos == std::string_view::npos)
+            ? std::string(url.substr(id_pos))
+            : std::string(url.substr(id_pos, query_pos - id_pos));
+    clean_url = "https://www.youtube.com/watch?v=" + video_id;
+  } else {
+    clean_url = url;
+  }
+  size_t param_pos = clean_url.find_first_of("?&");
+  if (param_pos != std::string::npos) {
+    std::string base = clean_url.substr(0, param_pos);
+    std::string query = clean_url.substr(param_pos + 1);
+
+    if (query.find("v=") == 0 || query.find("v=") == 1) {
+      size_t next_param = query.find('&');
+      if (next_param != std::string::npos) {
+        base += "?" + query.substr(0, next_param);
+      } else {
+        base += "?" + query;
+      }
+    }
+    clean_url = base;
+  }
+
+  return clean_url;
+}
 std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
                                                std::string apiKey) {
   size_t size = 0;
@@ -124,12 +156,13 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
       for (size_t i = 1; i < rows.size(); ++i) {
         auto row = rows[i];
         if (row.size() < 4) {
-          throw std::runtime_error("Invalid row!");
+          throw std::runtime_error("[getResponses] Invalid row!");
         }
         // TODO: input validation on rows
+        std::string link = row[2];
 
         if (isValidYoutubeURL(row[2])) {
-          Entry entry = Entry{row[1], row[2], row[3]};
+          Entry entry = Entry{row[1], sanitizeYoutubeURL(link), row[3]};
           std::cout << "Username: " << entry.user << " Link: " << entry.link
                     << " Timestamp: " << entry.timestamp << std::endl;
           entries.emplace_back(entry);
@@ -141,15 +174,15 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
       // status 0 means the request never got through (no internet, bad URL,
       // etc.)
       std::cerr << "Request failed: " << response.error.message << std::endl;
-      throw std::runtime_error("Internal Server Error");
+      throw std::runtime_error("[getResponses] Internal Server Error");
     } else {
       std::cerr << "HTTP error " << response.status_code << ": "
                 << response.text << std::endl;
-      throw std::runtime_error("Invalid Sheets Link!");
+      throw std::runtime_error("[getResponses] Invalid Sheets Link!");
     }
   } else {
     std::cerr << "apiKey environment variable not set!" << std::endl;
-    throw std::runtime_error("Invalid API Key!");
+    throw std::runtime_error("[getResponses] Invalid API Key!");
   }
   return std::nullopt;
 }
@@ -167,13 +200,13 @@ int executeffmpegCommand(const std::string &command) {
   const int status = std::system(command.c_str());
 
   if (status == -1) {
-    throw std::runtime_error("Failed to launch ffmpeg.");
+    throw std::runtime_error("[executeffmpeg] Failed to launch ffmpeg.");
   }
 
   return status;
 }
 static std::string buildEntryLabelCommand(const Entry &entry) {
-  const std::filesystem::path &destPath = wxGetApp().destPath;
+  // const std::filesystem::path &destPath = wxGetApp().settings.destPath;
 
   // std::format: (original_filepath, song_txtfile, submitter_txtfile,
   // output_filepath)
@@ -189,7 +222,8 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
       "\"{}\"";
   if (entry.link.empty() || entry.path.empty() || entry.timestamp.empty() ||
       entry.user.empty()) {
-    throw std::runtime_error("Entry is missing required field(s)");
+    throw std::runtime_error(
+        "[buildEntryLabelCommand] Entry is missing required field(s)");
   }
 
   // using a textfile for ffmpeg text overlay handles any escape characters in
@@ -212,7 +246,8 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
                           const std::string &content) {
     std::ofstream txt(p, std::ios::binary);
     if (!txt) {
-      throw std::runtime_error("Failed to write label file: " + p.string());
+      throw std::runtime_error(
+          "[buildEntryLabelCommand] Failed to write label file: " + p.string());
     }
     txt << content;
   };
@@ -234,12 +269,46 @@ void AddEntryLabels(const std::vector<Entry> &entries) {
       std::string command = buildEntryLabelCommand(e);
       const int status = executeffmpegCommand(command);
       if (status != 0) {
-        std::cerr << std::format("ffmpeg exited with status {}", status)
+        std::cerr << std::format(
+                         "[AddEntryLabels] ffmpeg exited with status {}\n",
+                         status)
                   << std::endl;
       }
 
     } catch (std::runtime_error &err) {
       std::cerr << err.what() << std::endl;
     }
+  }
+}
+void CombineEntries(const std::vector<Entry> &entries) {
+  if (entries.size() < 2)
+    return;
+  const auto outDir = wxGetApp().settings.destPath / "out";
+  std::cout << outDir << std::endl << std::endl;
+  const auto listFile = outDir.parent_path() / "temp" / "concat.txt";
+
+  std::ofstream list(listFile);
+  if (!list) {
+    throw std::runtime_error("[CombineEntries] Failed to write concat file: " +
+                             listFile.string());
+  }
+  for (const Entry &entry : entries) {
+    const auto video = outDir / entry.path.filename();
+    list << "file '" << video.string() << "'\n";
+  }
+  list.close();
+
+  const auto output = outDir / "final.mp4";
+
+  const std::string command =
+      std::format("ffmpeg -y -f concat -safe 0 -i \"{}\" -c copy \"{}\"",
+                  listFile.string(), output.string());
+  const int status = std::system(command.c_str());
+  if (status == -1) {
+    throw std::runtime_error("[CombineEntries] ffmpeg failed to initialize");
+  } else if (status != 0) {
+    std::cerr << std::format("[CombineEntries] ffmpeg exited with status {}\n",
+                             status)
+              << std::endl;
   }
 }

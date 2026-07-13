@@ -224,6 +224,7 @@ void MainFrame::OnCreate(wxCommandEvent &event) {
   // add text
   AddEntryLabels(entries);
   // stitch videos together
+  CombineEntries(entries);
 }
 // upon clicking Save Key at file -> set api key
 void MainFrame::OnSetAPIKey(wxCommandEvent &event) {
