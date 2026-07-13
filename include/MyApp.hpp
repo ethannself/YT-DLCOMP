@@ -16,8 +16,6 @@ struct AppSettings {
 class MyApp : public wxApp {
 public:
   bool OnInit() override;
-  std::filesystem::path destPath;
-  std::string apiKey;
   AppSettings settings;
 };
 
