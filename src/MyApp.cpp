@@ -27,7 +27,7 @@ std::filesystem::path AppSettings::getSettingsPath() {
 }
 void AppSettings::saveSettings() {
   std::cout << std::format(
-      "Saving settings: apiKey={}, destPath={}, sheetsLink={}", this->apiKey,
+      "Saving settings: apiKey={}, destPath={}, sheetsLink={}\n", this->apiKey,
       this->destPath.string(), this->sheetsLink);
   std::ofstream file(getSettingsPath());
   file << std::format("apiKey={}\ndestPath={}\nsheetsLink={}\n", this->apiKey,
