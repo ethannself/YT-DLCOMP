@@ -24,7 +24,9 @@ std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath);
 std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
                                                std::string apiKey);
-std::string buildEntryLabelCommand(const Entry &entry);
+// std::string buildEntryLabelCommand(const Entry &entry);
+void AddEntryLabels(const std::vector<Entry> &entries);
+
 int executeffmpegCommand(const std::string &command);
 
 wxDECLARE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);

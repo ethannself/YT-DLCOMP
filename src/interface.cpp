@@ -164,10 +164,15 @@ std::string escapeFilterPath(std::string_view path) {
 }
 int executeffmpegCommand(const std::string &command) {
 
-  return std::system(command.c_str());
-}
+  const int status = std::system(command.c_str());
 
-std::string buildEntryLabelCommand(const Entry &entry) {
+  if (status == -1) {
+    throw std::runtime_error("Failed to launch ffmpeg.");
+  }
+
+  return status;
+}
+static std::string buildEntryLabelCommand(const Entry &entry) {
   const std::filesystem::path &destPath = wxGetApp().destPath;
 
   // std::format: (original_filepath, song_txtfile, submitter_txtfile,
@@ -222,4 +227,19 @@ std::string buildEntryLabelCommand(const Entry &entry) {
       std::format(templateCommand, entry.path.string(), escapedSongFile,
                   escapedSubmitterFile, outPath.string());
   return cmd;
+}
+void AddEntryLabels(const std::vector<Entry> &entries) {
+  for (const Entry &e : entries) {
+    try {
+      std::string command = buildEntryLabelCommand(e);
+      const int status = executeffmpegCommand(command);
+      if (status != 0) {
+        std::cerr << std::format("ffmpeg exited with status {}", status)
+                  << std::endl;
+      }
+
+    } catch (std::runtime_error &err) {
+      std::cerr << err.what() << std::endl;
+    }
+  }
 }

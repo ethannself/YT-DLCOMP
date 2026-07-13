@@ -222,15 +222,7 @@ void MainFrame::OnCreate(wxCommandEvent &event) {
   // todo introvideo handling
 
   // add text
-  for (const Entry &e : entries) {
-    try {
-      std::string command = buildEntryLabelCommand(e);
-
-      executeffmpegCommand(command);
-    } catch (std::runtime_error &e) {
-      std::cerr << e.what() << std::endl;
-    }
-  }
+  AddEntryLabels(entries);
   // stitch videos together
 }
 // upon clicking Save Key at file -> set api key
