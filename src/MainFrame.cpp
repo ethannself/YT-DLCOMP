@@ -68,7 +68,7 @@ MainFrame::MainFrame()
   linkError->SetForegroundColour(wxColour{200, 0, 0});
   wxBoxSizer *buttonSizer = new wxBoxSizer(wxHORIZONTAL);
 
-  wxButton *startButton = new wxButton(panel, wxID_EXECUTE, "Start",
+  wxButton *startButton = new wxButton(panel, wxID_EXECUTE, "Download",
                                        wxDefaultPosition, wxSize(120, 35));
   wxButton *closeButton = new wxButton(panel, wxID_ANY, "Close",
                                        wxDefaultPosition, wxSize(120, 35));
@@ -78,6 +78,10 @@ MainFrame::MainFrame()
 
   buttonSizer->Add(startButton, wxSizerFlags().Border(wxRIGHT, 10));
   buttonSizer->Add(closeButton);
+
+  wxButton *compButton = new wxButton(panel, wxID_SAVE, "Edit Comp",
+                                      wxDefaultPosition, wxSize(120, 35));
+  compButton->Enable(true);
   downloadLabel =
       new wxStaticText(panel, wxID_ANY, "", wxDefaultPosition, wxSize(400, -1),
                        wxALIGN_CENTER_HORIZONTAL | wxST_NO_AUTORESIZE);
@@ -92,8 +96,9 @@ MainFrame::MainFrame()
   mainSizer->Add(apiTextWarning, 0, wxALIGN_CENTER | wxBOTTOM, 8);
   mainSizer->Add(spreadsheetLinkEntry, 0, wxALIGN_CENTER | wxBOTTOM, 15);
   mainSizer->Add(linkError, 0, wxALIGN_CENTER | wxBOTTOM, 2);
-  // mainSizer->Add(startButton, 0, wxALIGN_CENTER | wxBOTTOM, 15);
+
   mainSizer->Add(buttonSizer, 0, wxALIGN_CENTER, 15);
+  mainSizer->Add(compButton, 0, wxALIGN_CENTER | wxTOP, 15);
   mainSizer->Add(downloadLabel, 0, wxALIGN_CENTER | wxTOP, 30);
   mainSizer->Add(gauge, 0, wxALIGN_CENTER | wxTOP, 6);
 
@@ -114,6 +119,7 @@ MainFrame::MainFrame()
   Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
   Bind(wxEVT_MENU, &MainFrame::OnExit, this, wxID_EXIT);
   Bind(wxEVT_BUTTON, &MainFrame::OnEnter, this, wxID_EXECUTE);
+  Bind(wxEVT_BUTTON, &MainFrame::OnCreate, this, wxID_SAVE);
   Bind(wxEVT_MENU, &MainFrame::OnSetAPIKey, this, ID_SET_API);
   Bind(wxEVT_TEXT, &MainFrame::OnLinkChanged, this, wxID_FILE);
   Bind(EVT_DOWNLOAD_PROGRESS, &MainFrame::OnDownloadProgress, this);
@@ -210,6 +216,22 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     std::cout << "[Error] getResponses: " << err.what() << std::endl;
     DisplayError(err.what(), 3);
   }
+}
+void MainFrame::OnCreate(wxCommandEvent &event) {
+  const std::vector<Entry> &entries = filesPanel->GetEntries();
+  // todo introvideo handling
+
+  // add text
+  for (const Entry &e : entries) {
+    try {
+      std::string command = buildEntryLabelCommand(e);
+
+      executeffmpegCommand(command);
+    } catch (std::runtime_error &e) {
+      std::cerr << e.what() << std::endl;
+    }
+  }
+  // stitch videos together
 }
 // upon clicking Save Key at file -> set api key
 void MainFrame::OnSetAPIKey(wxCommandEvent &event) {

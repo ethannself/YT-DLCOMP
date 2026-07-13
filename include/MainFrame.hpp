@@ -7,7 +7,6 @@
 #include <wx/stattext.h>
 #include <wx/wx.h>
 
-
 enum { ID_PATH = wxID_HIGHEST + 1, ID_API_UNSET, ID_SET_API };
 
 class MainFrame : public wxFrame {
@@ -20,6 +19,7 @@ private:
   void OnExit(wxCommandEvent &event);
   void OnAbout(wxCommandEvent &event);
   void OnEnter(wxCommandEvent &event);
+  void OnCreate(wxCommandEvent &event);
   void OnSetAPIKey(wxCommandEvent &event);
   void OnLinkChanged(wxCommandEvent &event);
   void OnDownloadProgress(wxThreadEvent &event);

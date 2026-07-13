@@ -1,4 +1,5 @@
 #include "interface.hpp"
+#include "MyApp.hpp"
 
 #include <array>
 #include <cpr/api.h>
@@ -7,6 +8,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <format>
 #include <iostream>
 #include <memory>
@@ -150,4 +152,74 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
     throw std::runtime_error("Invalid API Key!");
   }
   return std::nullopt;
+}
+std::string escapeFilterPath(std::string_view path) {
+  std::string out;
+  for (char c : path) {
+    if (c == ':' || c == '\\' || c == '\'')
+      out += '\\';
+    out += c;
+  }
+  return out;
+}
+int executeffmpegCommand(const std::string &command) {
+
+  return std::system(command.c_str());
+}
+
+std::string buildEntryLabelCommand(const Entry &entry) {
+  const std::filesystem::path &destPath = wxGetApp().destPath;
+
+  // std::format: (original_filepath, song_txtfile, submitter_txtfile,
+  // output_filepath)
+  static constexpr std::string_view templateCommand =
+      "ffmpeg -y -i \"{}\" -vf "
+      "\"scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:("
+      "ow-iw)/2:(oh-ih)/2,fps=30,"
+      "drawtext=textfile='{}':fontsize=32:fontcolor=white:"
+      "x=(w-text_w)/2:y=h-2*th-62:box=1:boxcolor=black@0.5:boxborderw=8,"
+      "drawtext=textfile='{}':fontsize=28:fontcolor=white:"
+      "x=(w-text_w)/2:y=h-th-40:box=1:boxcolor=black@0.5:boxborderw=8\" "
+      "-c:v libx264 -preset fast -crf 20 -c:a aac -ar 48000 -ac 2 -b:a 192k "
+      "\"{}\"";
+  if (entry.link.empty() || entry.path.empty() || entry.timestamp.empty() ||
+      entry.user.empty()) {
+    throw std::runtime_error("Entry is missing required field(s)");
+  }
+
+  // using a textfile for ffmpeg text overlay handles any escape characters in
+  // the text label automatically
+  std::filesystem::path tempDir = entry.path.parent_path() / "temp";
+  std::filesystem::path outDir = entry.path.parent_path() / "out";
+  std::filesystem::create_directories(tempDir);
+  std::filesystem::create_directories(outDir);
+  std::filesystem::path outPath;
+  outPath = outDir / entry.path.filename();
+  // TODO: capture song name
+  std::string songLine = "SONGNAME";
+  std::string submitterLine = "Submitted by " + entry.user;
+
+  std::filesystem::path songTextPath =
+      tempDir / ("song_" + entry.path.stem().string() + ".txt");
+  std::filesystem::path submitterTextPath =
+      tempDir / ("submitter_" + entry.path.stem().string() + ".txt");
+  auto writeTextFile = [](const std::filesystem::path &p,
+                          const std::string &content) {
+    std::ofstream txt(p, std::ios::binary);
+    if (!txt) {
+      throw std::runtime_error("Failed to write label file: " + p.string());
+    }
+    txt << content;
+  };
+  writeTextFile(songTextPath, songLine);
+  writeTextFile(submitterTextPath, submitterLine);
+  // handle escape characters in filepath
+  std::string escapedSongFile = escapeFilterPath(songTextPath.string());
+  std::string escapedSubmitterFile =
+      escapeFilterPath(submitterTextPath.string());
+
+  std::string cmd =
+      std::format(templateCommand, entry.path.string(), escapedSongFile,
+                  escapedSubmitterFile, outPath.string());
+  return cmd;
 }
