@@ -13,7 +13,6 @@ struct AppSettings {
   static std::filesystem::path getSettingsPath();
   static AppSettings LoadSettings();
   void saveSettings();
-  std::variant<std::filesystem::path, std::string> operator[](size_t index);
 };
 
 class MyApp : public wxApp {

@@ -12,7 +12,4 @@ void SettingsPanel::BuildUI() {
   wxBoxSizer *mainSizer = new wxBoxSizer(wxVERTICAL);
 
   this->SetSizer(mainSizer);
-
-  for (size_t i = 0; i < NUM_SETTINGS; ++i) {
-  }
 }

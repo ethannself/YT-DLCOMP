@@ -60,16 +60,3 @@ AppSettings AppSettings::LoadSettings() {
       settings.apiKey, settings.destPath.string(), settings.sheetsLink);
   return settings;
 }
-std::variant<std::filesystem::path, std::string>
-AppSettings::operator[](size_t index) {
-  switch (index) {
-  case 0:
-    return this->destPath;
-  case 1:
-    return this->apiKey;
-  case 2:
-    return this->sheetsLink;
-  default:
-    throw std::out_of_range("AppSettings::operator[]: invalid index");
-  }
-}
