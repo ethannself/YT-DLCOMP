@@ -11,8 +11,7 @@ enum { ID_PATH = wxID_HIGHEST + 1, ID_API_UNSET, ID_SET_API };
 
 class MainFrame : public wxFrame {
 public:
-  MainFrame();
-  MainFrame(const wxString &title);
+  explicit MainFrame(const wxString &title);
 
 private:
   void OnSetPath(wxCommandEvent &event);

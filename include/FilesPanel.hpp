@@ -7,8 +7,7 @@
 
 class FilesPanel : public wxPanel {
 public:
-  FilesPanel();
-  FilesPanel(wxWindow *parent);
+  explicit FilesPanel(wxWindow *parent);
   void AddFile(const Entry &e, const std::string &path);
   void SetEntries(std::vector<Entry> entries) {
     this->entries = std::move(entries);

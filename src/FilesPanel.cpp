@@ -15,7 +15,6 @@
 #include <windows.h>
 #endif
 enum { COL_SUBMITTER = 0, COL_URL, COL_TIMESTAMP, COL_FILEPATH };
-FilesPanel::FilesPanel() : wxPanel(nullptr) {}
 FilesPanel::FilesPanel(wxWindow *parent) : wxPanel(parent) { BuildUI(); }
 
 void FilesPanel::BuildUI() {

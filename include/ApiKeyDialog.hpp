@@ -5,7 +5,7 @@
 #include <wx/textctrl.h>
 class ApiKeyDialog : public wxDialog {
 public:
-  ApiKeyDialog(wxWindow *parent);
+  explicit ApiKeyDialog(wxWindow *parent);
 
   wxString GetApiKey() const;
 

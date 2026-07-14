@@ -20,9 +20,8 @@
 #include <wx/textctrl.h>
 #include <wx/window.h>
 
-MainFrame::MainFrame()
-    : wxFrame(nullptr, wxID_ANY, "Hello World", wxDefaultPosition,
-              wxSize(950, 700)) {
+MainFrame::MainFrame(const wxString &title)
+    : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxSize(950, 700)) {
   auto &settings = wxGetApp().settings;
   wxMenu *menuFile = new wxMenu;
   menuFile->Append(
@@ -124,8 +123,6 @@ MainFrame::MainFrame()
   Bind(wxEVT_TEXT, &MainFrame::OnLinkChanged, this, wxID_FILE);
   Bind(EVT_DOWNLOAD_PROGRESS, &MainFrame::OnDownloadProgress, this);
 }
-
-MainFrame::MainFrame(const wxString &title) : MainFrame() { SetTitle(title); };
 
 void MainFrame::OnExit(wxCommandEvent &event) { Close(true); }
 
