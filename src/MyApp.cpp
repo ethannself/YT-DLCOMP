@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <variant>
 #include <wx/app.h>
 #include <wx/stdpaths.h>
 #include <wx/string.h>
@@ -46,6 +47,7 @@ AppSettings AppSettings::LoadSettings() {
       continue;
     std::string key = line.substr(0, delim);
     std::string value = line.substr(delim + 1);
+
     if (key == "apiKey")
       settings.apiKey = value;
     else if (key == "destPath")
@@ -57,4 +59,17 @@ AppSettings AppSettings::LoadSettings() {
       "Loaded settings: apiKey={}, destPath={}, sheetsLink={}\n",
       settings.apiKey, settings.destPath.string(), settings.sheetsLink);
   return settings;
+}
+std::variant<std::filesystem::path, std::string>
+AppSettings::operator[](size_t index) {
+  switch (index) {
+  case 0:
+    return this->destPath;
+  case 1:
+    return this->apiKey;
+  case 2:
+    return this->sheetsLink;
+  default:
+    throw std::out_of_range("AppSettings::operator[]: invalid index");
+  }
 }

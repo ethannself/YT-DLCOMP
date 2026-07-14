@@ -1,5 +1,6 @@
 #pragma once
 #include "FilesPanel.hpp"
+#include "SettingsPanel.hpp"
 #include <wx/app.h>
 #include <wx/event.h>
 #include <wx/frame.h>
@@ -28,6 +29,7 @@ private:
   wxStaticText *downloadLabel;
   wxStaticText *apiTextWarning;
   FilesPanel *filesPanel;
+  SettingsPanel *settingsPanel;
   void UpdateStartButton();
   void DisplayError(std::string message, size_t durationSeconds);
 };

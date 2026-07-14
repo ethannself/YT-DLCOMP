@@ -67,8 +67,8 @@ ApiKeyDialog::ApiKeyDialog(wxWindow *parent)
   okBtn->SetDefault();
   okBtn->Enable(false);
 
-  btnRow->Add(cancelButton, 0, wxRIGHT, 8);
   btnRow->Add(okBtn, 0);
+  btnRow->Add(cancelButton, 0, wxRIGHT, 8);
   inner->Add(btnRow, 0, wxEXPAND);
 
   outer->Add(inner, 1, wxEXPAND | wxALL, 20);

@@ -105,8 +105,10 @@ MainFrame::MainFrame(const wxString &title)
 
   panel->SetSizer(mainSizer);
   filesPanel = new FilesPanel(notebook);
+  settingsPanel = new SettingsPanel(notebook);
   notebook->AddPage(panel, "Home");
   notebook->AddPage(filesPanel, "Files");
+  notebook->AddPage(settingsPanel, "Settings");
 
   wxBoxSizer *frameSizer = new wxBoxSizer(wxVERTICAL);
   frameSizer->Add(notebook, 1, wxEXPAND);
