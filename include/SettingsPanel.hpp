@@ -10,4 +10,8 @@ private:
   void BuildUI();
   AppSettings &settings;
   void OnDirChanged(wxFileDirPickerEvent &e);
+  void SaveSettings(wxCommandEvent &e);
+
+  wxDirPickerCtrl *destPicker;
+  wxButton *saveButton;
 };

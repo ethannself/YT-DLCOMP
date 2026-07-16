@@ -4,6 +4,7 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <rpcndr.h>
 #include <string>
 #include <wx/app.h>
 #include <wx/stdpaths.h>
@@ -26,12 +27,14 @@ std::filesystem::path AppSettings::getSettingsPath() {
          "settings.ini";
 }
 void AppSettings::saveSettings() {
-  std::cout << std::format(
-      "Saving settings: apiKey={}, destPath={}, sheetsLink={}\n", this->apiKey,
-      this->destPath.string(), this->sheetsLink);
+  std::cout << std::format("Saving settings: apiKey={}, destPath={}, "
+                           "sheetsLink={},keepOriginal={}\n",
+                           this->apiKey, this->destPath.string(),
+                           this->sheetsLink, this->keepOriginal);
   std::ofstream file(getSettingsPath());
-  file << std::format("apiKey={}\ndestPath={}\nsheetsLink={}\n", this->apiKey,
-                      this->destPath.string(), this->sheetsLink);
+  file << std::format(
+      "apiKey={}\ndestPath={}\nsheetsLink={}\nkeepOriginal={}\n", this->apiKey,
+      this->destPath.string(), this->sheetsLink, this->keepOriginal);
 }
 AppSettings AppSettings::LoadSettings() {
   AppSettings settings{};
@@ -53,9 +56,13 @@ AppSettings AppSettings::LoadSettings() {
       settings.destPath = std::filesystem::path{value};
     else if (key == "sheetsLink")
       settings.sheetsLink = value;
+    else if (key == "keepOriginal")
+      (value == "true") ? settings.keepOriginal = true
+                        : settings.keepOriginal = false;
   }
   std::cout << std::format(
-      "Loaded settings: apiKey={}, destPath={}, sheetsLink={}\n",
-      settings.apiKey, settings.destPath.string(), settings.sheetsLink);
+      "Loaded settings: apiKey={}, destPath={}, sheetsLink={}\nkeepOriginal={}",
+      settings.apiKey, settings.destPath.string(), settings.sheetsLink,
+      settings.keepOriginal);
   return settings;
 }

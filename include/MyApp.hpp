@@ -9,6 +9,7 @@ struct AppSettings {
   std::filesystem::path destPath;
   std::string apiKey;
   std::string sheetsLink;
+  bool keepOriginal = false;
   // remember update save/load fn if add any
 
   static std::filesystem::path getSettingsPath();
