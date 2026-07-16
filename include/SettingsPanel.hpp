@@ -1,4 +1,6 @@
+#pragma once
 #include "MyApp.hpp"
+#include <wx/filepicker.h>
 #include <wx/panel.h>
 class SettingsPanel : public wxPanel {
 public:
@@ -7,4 +9,5 @@ public:
 private:
   void BuildUI();
   AppSettings &settings;
+  void OnDirChanged(wxFileDirPickerEvent &e);
 };

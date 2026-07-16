@@ -141,7 +141,6 @@ void MainFrame::OnSetPath(wxCommandEvent &event) {
   if (dlg.ShowModal() == wxID_OK) {
     settings.destPath = dlg.GetPath().ToStdString();
     settings.saveSettings();
-
     GetMenuBar()->FindItem(ID_PATH)->SetHelp(
         std::format("Current Destination {}", settings.destPath.string()));
 

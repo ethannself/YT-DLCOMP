@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <variant>
 #include <wx/app.h>
 #include <wx/stdpaths.h>
 #include <wx/string.h>
