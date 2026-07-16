@@ -1,4 +1,5 @@
 #include "SettingsPanel.hpp"
+#include "MainFrame.hpp"
 #include "MyApp.hpp"
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -13,6 +14,7 @@
 SettingsPanel::SettingsPanel(wxWindow *parent)
     : wxPanel(parent), settings(wxGetApp().settings) {
   BuildUI();
+  LoadSettings();
 }
 
 void SettingsPanel::BuildUI() {
@@ -29,14 +31,14 @@ void SettingsPanel::BuildUI() {
       wxDIRP_DEFAULT_STYLE);
 
   destPicker->Bind(wxEVT_DIRPICKER_CHANGED, &SettingsPanel::OnDirChanged, this);
-  wxCheckBox *saveVideosCheckbox =
+  saveVideosCheckbox =
       new wxCheckBox(this, wxID_ANY, "Keep original videos after editting");
-
+  saveVideosCheckbox->Bind(wxEVT_CHECKBOX, &SettingsPanel::OnCheckboxChanged,
+                           this);
   saveButton =
       new wxButton(this, wxID_ANY, "Save", wxDefaultPosition, wxDefaultSize);
-
+  saveButton->Enable(false);
   saveButton->Bind(wxEVT_BUTTON, &SettingsPanel::SaveSettings, this);
-
   mainSizer->Add(destLabel, 0, wxEXPAND | wxBOTTOM, 5);
   mainSizer->Add(destPicker, 0, wxEXPAND | wxBOTTOM, 15);
   // mainSizer->AddSpacer(5);
@@ -47,13 +49,23 @@ void SettingsPanel::BuildUI() {
 
   this->SetSizer(outerSizer);
 }
-void SettingsPanel::OnDirChanged(wxFileDirPickerEvent &e) {
-
-  if (e.GetPath().ToStdString() != settings.destPath) {
-    saveButton->Enable(true);
-  }
+void SettingsPanel::LoadSettings() {
+  this->destPicker->SetPath(
+      (!settings.destPath.string().empty()) ? settings.destPath.string() : "");
+  this->saveVideosCheckbox->SetValue(settings.keepOriginal);
 }
+void SettingsPanel::OnDirChanged(wxFileDirPickerEvent &e) { CheckSave(); }
+void SettingsPanel::OnCheckboxChanged(wxCommandEvent &e) { CheckSave(); }
 void SettingsPanel::SaveSettings(wxCommandEvent &e) {
   settings.destPath = destPicker->GetPath().ToStdString();
-  settings.saveSettings();
+  settings.keepOriginal = saveVideosCheckbox->GetValue();
+}
+
+void SettingsPanel::CheckSave() {
+  if (destPicker->GetPath().ToStdString() != settings.destPath ||
+      saveVideosCheckbox->GetValue() != settings.keepOriginal) {
+    saveButton->Enable(true);
+    return;
+  }
+  saveButton->Enable(false);
 }

@@ -60,9 +60,9 @@ AppSettings AppSettings::LoadSettings() {
       (value == "true") ? settings.keepOriginal = true
                         : settings.keepOriginal = false;
   }
-  std::cout << std::format(
-      "Loaded settings: apiKey={}, destPath={}, sheetsLink={}\nkeepOriginal={}",
-      settings.apiKey, settings.destPath.string(), settings.sheetsLink,
-      settings.keepOriginal);
+  std::cout << std::format("Loaded settings: apiKey={}, destPath={}, "
+                           "sheetsLink={}\nkeepOriginal={}\n",
+                           settings.apiKey, settings.destPath.string(),
+                           settings.sheetsLink, settings.keepOriginal);
   return settings;
 }
