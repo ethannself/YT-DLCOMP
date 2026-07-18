@@ -1,5 +1,4 @@
 #include "SettingsPanel.hpp"
-#include "MainFrame.hpp"
 #include "MyApp.hpp"
 #include <wx/button.h>
 #include <wx/checkbox.h>
