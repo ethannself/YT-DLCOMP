@@ -22,12 +22,10 @@ void SettingsPanel::BuildUI() {
   // destPath, apiKey, sheetsLink;
   wxStaticText *destLabel =
       new wxStaticText(this, wxID_ANY, "Video Destination Path");
-  destPicker = new wxDirPickerCtrl(
-      this, wxID_ANY,
-      (!settings.destPath.string().empty()) ? settings.destPath.string()
-                                            : wxString(),
-      "Choose Destination Folder", wxDefaultPosition, wxDefaultSize,
-      wxDIRP_DEFAULT_STYLE);
+  destPicker =
+      new wxDirPickerCtrl(this, wxID_ANY, settings.getDestPath().string(),
+                          "Choose Destination Folder", wxDefaultPosition,
+                          wxDefaultSize, wxDIRP_DEFAULT_STYLE);
 
   destPicker->Bind(wxEVT_DIRPICKER_CHANGED, &SettingsPanel::OnDirChanged, this);
   saveVideosCheckbox =
@@ -49,8 +47,7 @@ void SettingsPanel::BuildUI() {
   this->SetSizer(outerSizer);
 }
 void SettingsPanel::LoadSettings() {
-  this->destPicker->SetPath(
-      (!settings.destPath.string().empty()) ? settings.destPath.string() : "");
+  this->destPicker->SetPath((settings.getDestPath().string()));
   this->saveVideosCheckbox->SetValue(settings.keepOriginal);
 }
 void SettingsPanel::OnDirChanged(wxFileDirPickerEvent &e) { CheckSave(); }
@@ -61,7 +58,7 @@ void SettingsPanel::SaveSettings(wxCommandEvent &e) {
 }
 
 void SettingsPanel::CheckSave() {
-  if (destPicker->GetPath().ToStdString() != settings.destPath ||
+  if (destPicker->GetPath().ToStdString() != settings.getDestPath().string() ||
       saveVideosCheckbox->GetValue() != settings.keepOriginal) {
     saveButton->Enable(true);
     return;

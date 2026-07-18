@@ -1,7 +1,7 @@
 #pragma once
 #include <filesystem>
+#include <nlohmann/json.hpp>
 #include <string>
-
 #include <wx/app.h>
 
 const int NUM_SETTINGS = 3;
@@ -10,8 +10,11 @@ struct AppSettings {
   std::string apiKey;
   std::string sheetsLink;
   bool keepOriginal = false;
-  // remember update save/load fn if add any
 
+  NLOHMANN_DEFINE_TYPE_INTRUSIVE(AppSettings, destPath, apiKey, sheetsLink,
+                                 keepOriginal)
+
+  std::filesystem::path getDestPath();
   static std::filesystem::path getSettingsPath();
   static AppSettings LoadSettings();
   void saveSettings();

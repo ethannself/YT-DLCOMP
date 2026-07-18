@@ -1,14 +1,20 @@
 #include "MyApp.hpp"
 #include "../include/MainFrame.hpp"
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
 #include <rpcndr.h>
-#include <string>
 #include <wx/app.h>
 #include <wx/stdpaths.h>
 #include <wx/string.h>
+
+static const auto DEFAULT_DESTINATION_PATH =
+    std::filesystem::path{
+        wxStandardPaths::Get().GetExecutablePath().ToStdString()}
+        .parent_path() /
+    "data";
 
 bool MyApp::OnInit() {
   AllocConsole();
@@ -24,45 +30,40 @@ std::filesystem::path AppSettings::getSettingsPath() {
   return std::filesystem::path{
              wxStandardPaths::Get().GetExecutablePath().ToStdString()}
              .parent_path() /
-         "settings.ini";
+         "settings.json";
 }
+std::filesystem::path AppSettings::getDestPath() {
+  auto path =
+      (!this->destPath.empty() ? this->destPath : DEFAULT_DESTINATION_PATH);
+  return path;
+}
+
 void AppSettings::saveSettings() {
   std::cout << std::format("Saving settings: apiKey={}, destPath={}, "
                            "sheetsLink={},keepOriginal={}\n",
                            this->apiKey, this->destPath.string(),
                            this->sheetsLink, this->keepOriginal);
-  std::ofstream file(getSettingsPath());
-  file << std::format(
-      "apiKey={}\ndestPath={}\nsheetsLink={}\nkeepOriginal={}\n", this->apiKey,
-      this->destPath.string(), this->sheetsLink, this->keepOriginal);
+
+  auto path = getSettingsPath();
+  std::filesystem::create_directories(path.parent_path());
+
+  nlohmann::json j = *this;
+  std::ofstream file(path);
+  file << j.dump(4);
 }
 AppSettings AppSettings::LoadSettings() {
   AppSettings settings{};
-  std::ifstream file(getSettingsPath());
-  if (!file.is_open())
+  auto path = getSettingsPath();
+
+  if (!std::filesystem::exists(path))
     return settings;
-  std::string line;
-
-  while (std::getline(file, line)) {
-    auto delim = line.find('=');
-    if (delim == std::string::npos)
-      continue;
-    std::string key = line.substr(0, delim);
-    std::string value = line.substr(delim + 1);
-
-    if (key == "apiKey")
-      settings.apiKey = value;
-    else if (key == "destPath")
-      settings.destPath = std::filesystem::path{value};
-    else if (key == "sheetsLink")
-      settings.sheetsLink = value;
-    else if (key == "keepOriginal")
-      (value == "true") ? settings.keepOriginal = true
-                        : settings.keepOriginal = false;
+  try {
+    std::ifstream file(getSettingsPath());
+    nlohmann::json j;
+    file >> j;
+    settings = j.get<AppSettings>();
+  } catch (const std::exception &e) {
+    std::cerr << "[LoadSettings] Error: " << e.what() << std::endl;
   }
-  std::cout << std::format("Loaded settings: apiKey={}, destPath={}, "
-                           "sheetsLink={}\nkeepOriginal={}\n",
-                           settings.apiKey, settings.destPath.string(),
-                           settings.sheetsLink, settings.keepOriginal);
   return settings;
 }

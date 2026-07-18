@@ -206,7 +206,7 @@ int executeffmpegCommand(const std::string &command) {
   return status;
 }
 static std::string buildEntryLabelCommand(const Entry &entry) {
-  // const std::filesystem::path &destPath = wxGetApp().settings.destPath;
+  // const std::filesystem::path &destPath = wxGetApp().settings.getDestPath();
 
   // std::format: (original_filepath, song_txtfile, submitter_txtfile,
   // output_filepath)
@@ -283,7 +283,7 @@ void AddEntryLabels(const std::vector<Entry> &entries) {
 void CombineEntries(const std::vector<Entry> &entries) {
   if (entries.size() < 2)
     return;
-  const auto outDir = wxGetApp().settings.destPath / "out";
+  const auto outDir = wxGetApp().settings.getDestPath() / "out";
   std::cout << outDir << std::endl << std::endl;
   const auto listFile = outDir.parent_path() / "temp" / "concat.txt";
 

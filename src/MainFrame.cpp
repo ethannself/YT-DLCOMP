@@ -26,7 +26,7 @@ MainFrame::MainFrame(const wxString &title)
   wxMenu *menuFile = new wxMenu;
   menuFile->Append(
       ID_PATH, "&Set Destination Folder...\tCtrl-D",
-      std::format("Current Destination: {}", settings.destPath.string()));
+      std::format("Current Destination: {}", settings.getDestPath().string()));
   menuFile->AppendSeparator();
   menuFile->Append(
       ID_SET_API, "&Set API Key...\tCtrl-T",
@@ -136,13 +136,14 @@ void MainFrame::OnAbout(wxCommandEvent &event) {
 // called when player clicks file -> set destination folder or presses Ctrl+D.
 void MainFrame::OnSetPath(wxCommandEvent &event) {
   auto &settings = wxGetApp().settings;
-  wxDirDialog dlg(this, "Choose destination folder", settings.destPath.string(),
+  wxDirDialog dlg(this, "Choose destination folder",
+                  settings.getDestPath().string(),
                   wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
   if (dlg.ShowModal() == wxID_OK) {
     settings.destPath = dlg.GetPath().ToStdString();
     settings.saveSettings();
     GetMenuBar()->FindItem(ID_PATH)->SetHelp(
-        std::format("Current Destination {}", settings.destPath.string()));
+        std::format("Current Destination {}", settings.getDestPath().string()));
 
     SetStatusText("Destination: " + dlg.GetPath());
   }
@@ -163,7 +164,7 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     if (optResult.has_value()) {
       settings.saveSettings();
       this->filesPanel->SetEntries(optResult.value());
-      const auto &destPath = settings.destPath;
+      const auto destPath = settings.getDestPath();
       const size_t total = this->filesPanel->GetEntries().size();
 
       std::thread([destPath, total, this]() {
