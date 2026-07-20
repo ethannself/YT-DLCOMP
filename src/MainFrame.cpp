@@ -186,8 +186,7 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
                   wxQueueEvent(this, evt);
                 });
 
-            auto path = std::filesystem::path(
-                std::format("{}\\{}.{}", destPath.string(), i + 1, "mp4"));
+            auto path = destPath / "raw" / std::format("{}.{}", i + 1, "mp4");
 
             wxTheApp->CallAfter([this, i, path]() {
               this->filesPanel->SetEntryPath(i, path);
@@ -221,9 +220,16 @@ void MainFrame::OnCreate(wxCommandEvent &event) {
   // todo introvideo handling
 
   // add text
+  this->downloadLabel->SetLabelText("Adding labels to videos...");
+  gauge->SetValue(0);
   AddEntryLabels(entries);
   // stitch videos together
+  this->downloadLabel->SetLabelText("Combining videos...");
+  gauge->SetValue(50);
   CombineEntries(entries);
+  this->downloadLabel->SetLabelText("Done!");
+  gauge->SetValue(100);
+  cleanup();
 }
 // upon clicking Save Key at file -> set api key
 void MainFrame::OnSetAPIKey(wxCommandEvent &event) {

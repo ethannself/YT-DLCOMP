@@ -20,6 +20,16 @@
 #include <stdlib.h>
 #include <string>
 #include <wx/event.h>
+#include <wx/stdpaths.h>
+const auto EXECUTABLE_PATH =
+    std::filesystem::path{
+        wxStandardPaths::Get().GetExecutablePath().ToStdString()}
+        .parent_path();
+const auto TEMP_DIR = EXECUTABLE_PATH / "temp";
+// Layout: destPath/raw (downloads), destPath/labelled (labelled clips),
+// destPath/final.mp4 (combined output)
+const std::string FILE_EXTENSION = "mp4";
+const std::string FINAL_FILE_NAME = std::format("final.{}", FILE_EXTENSION);
 
 wxDEFINE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
 
@@ -88,6 +98,8 @@ std::string executeYtDLPCommand(
 }
 std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath) {
+  auto rawFilePath = destPath / "raw";
+  std::filesystem::create_directories(rawFilePath);
   int minutes = 0, seconds = 0;
   if (sscanf_s(entry.timestamp.c_str(), "%d:%d", &minutes, &seconds) != 2) {
     throw std::runtime_error("[buildYtDLP] Invalid timestamp");
@@ -102,7 +114,7 @@ std::string buildYtDlpCommand(size_t index, const Entry &entry,
       "-o \"{}/{}.%(ext)s\" "
       "--postprocessor-args \"ffmpeg:-ss {} -t 10 -c:v libx264 -c:a aac\" "
       "\"{}\" 2>&1",
-      destPath.string(), index, startSeconds, entry.link);
+      rawFilePath.string(), index, startSeconds, entry.link);
 }
 std::string sanitizeYoutubeURL(std::string_view url) {
   std::string clean_url;
@@ -161,7 +173,7 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
         // TODO: input validation on rows
         std::string link = row[2];
 
-        if (isValidYoutubeURL(row[2])) {
+        if (isValidYoutubeURL(link)) {
           Entry entry = Entry{row[1], sanitizeYoutubeURL(link), row[3]};
           std::cout << "Username: " << entry.user << " Link: " << entry.link
                     << " Timestamp: " << entry.timestamp << std::endl;
@@ -228,9 +240,8 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
 
   // using a textfile for ffmpeg text overlay handles any escape characters in
   // the text label automatically
-  std::filesystem::path tempDir = entry.path.parent_path() / "temp";
-  std::filesystem::path outDir = entry.path.parent_path() / "out";
-  std::filesystem::create_directories(tempDir);
+  auto outDir = wxGetApp().settings.getDestPath() / "labelled";
+  std::filesystem::create_directories(TEMP_DIR);
   std::filesystem::create_directories(outDir);
   std::filesystem::path outPath;
   outPath = outDir / entry.path.filename();
@@ -239,9 +250,9 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
   std::string submitterLine = "Submitted by " + entry.user;
 
   std::filesystem::path songTextPath =
-      tempDir / ("song_" + entry.path.stem().string() + ".txt");
+      TEMP_DIR / ("song_" + entry.path.stem().string() + ".txt");
   std::filesystem::path submitterTextPath =
-      tempDir / ("submitter_" + entry.path.stem().string() + ".txt");
+      TEMP_DIR / ("submitter_" + entry.path.stem().string() + ".txt");
   auto writeTextFile = [](const std::filesystem::path &p,
                           const std::string &content) {
     std::ofstream txt(p, std::ios::binary);
@@ -281,11 +292,19 @@ void AddEntryLabels(const std::vector<Entry> &entries) {
   }
 }
 void CombineEntries(const std::vector<Entry> &entries) {
-  if (entries.size() < 2)
+  if (entries.empty())
     return;
-  const auto outDir = wxGetApp().settings.getDestPath() / "out";
-  std::cout << outDir << std::endl << std::endl;
-  const auto listFile = outDir.parent_path() / "temp" / "concat.txt";
+  const auto destPath = wxGetApp().settings.getDestPath();
+  const auto labelledDir = destPath / "labelled";
+  const auto listFile = TEMP_DIR / "concat.txt";
+  const auto output = destPath / FINAL_FILE_NAME;
+
+  if (entries.size() == 1) {
+    const auto video = labelledDir / entries[0].path.filename();
+    std::filesystem::copy_file(
+        video, output, std::filesystem::copy_options::overwrite_existing);
+    return;
+  }
 
   std::ofstream list(listFile);
   if (!list) {
@@ -293,12 +312,10 @@ void CombineEntries(const std::vector<Entry> &entries) {
                              listFile.string());
   }
   for (const Entry &entry : entries) {
-    const auto video = outDir / entry.path.filename();
+    const auto video = labelledDir / entry.path.filename();
     list << "file '" << video.string() << "'\n";
   }
   list.close();
-
-  const auto output = outDir / "final.mp4";
 
   const std::string command =
       std::format("ffmpeg -y -f concat -safe 0 -i \"{}\" -c copy \"{}\"",
@@ -310,5 +327,22 @@ void CombineEntries(const std::vector<Entry> &entries) {
     std::cerr << std::format("[CombineEntries] ffmpeg exited with status {}\n",
                              status)
               << std::endl;
+  }
+}
+void cleanup() {
+  auto &settings = wxGetApp().settings;
+  const auto destPath = settings.getDestPath();
+
+  std::filesystem::remove_all(TEMP_DIR);
+
+  if (!settings.keepOriginal) {
+    // the raw videos
+    if (std::filesystem::exists(destPath / "raw")) {
+      std::filesystem::remove_all(destPath / "raw");
+    }
+    // videos with submission labels rendered
+    if (std::filesystem::exists(destPath / "labelled")) {
+      std::filesystem::remove_all(destPath / "labelled");
+    }
   }
 }
