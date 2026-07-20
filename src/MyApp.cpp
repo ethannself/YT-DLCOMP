@@ -1,5 +1,5 @@
 #include "MyApp.hpp"
-#include "../include/MainFrame.hpp"
+#include "MainFrame.hpp"
 #include <exception>
 #include <filesystem>
 #include <format>

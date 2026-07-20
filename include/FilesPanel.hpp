@@ -1,5 +1,5 @@
 #pragma once
-#include "interface.hpp"
+#include "Entry.hpp"
 #include <string>
 #include <vector>
 #include <wx/grid.h>

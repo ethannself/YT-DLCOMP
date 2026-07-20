@@ -1,5 +1,6 @@
 #pragma once
-
+#include "Entry.hpp"
+#include "FilesPanel.hpp"
 #include <filesystem>
 #include <functional>
 #include <optional>
@@ -8,14 +9,6 @@
 #include <vector>
 #include <wx/event.h>
 #include <wx/thread.h>
-
-const int COLUMN_COUNT = 4; // user, link, timestamp, file location
-struct Entry {
-  std::string user;
-  std::string link;
-  std::string timestamp;
-  std::filesystem::path path;
-};
 
 std::string
 executeYtDLPCommand(const char *cmd, std::string_view filename,

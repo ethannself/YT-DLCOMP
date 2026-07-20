@@ -4,7 +4,6 @@
 #include <string>
 #include <wx/app.h>
 
-const int NUM_SETTINGS = 3;
 struct AppSettings {
   std::filesystem::path destPath;
   std::string apiKey;

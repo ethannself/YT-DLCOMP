@@ -1,5 +1,4 @@
 #include "FilesPanel.hpp"
-#include "interface.hpp"
 #include <filesystem>
 #include <iostream>
 #include <wx/colour.h>
