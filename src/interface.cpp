@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <wx/app.h>
 #include <wx/event.h>
 #include <wx/stdpaths.h>
 const auto EXECUTABLE_PATH =
@@ -345,4 +346,49 @@ void cleanup() {
       std::filesystem::remove_all(destPath / "labelled");
     }
   }
+}
+
+void DownloadEntries(FilesPanel *filesPanel, wxEvtHandler *evtTarget,
+                     std::function<void(const std::string &)> setStatusText) {
+  const size_t total = filesPanel->GetEntries().size();
+  const auto destPath = wxGetApp().settings.getDestPath();
+
+  std::thread([filesPanel, destPath, total, evtTarget, setStatusText]() {
+    for (size_t i = 0; i < total; ++i) {
+      try {
+        Entry entry = filesPanel->GetEntries()[i];
+        std::string command = buildYtDlpCommand(i + 1, entry, destPath);
+
+        executeYtDLPCommand(command.c_str(), std::to_string(i),
+                            [evtTarget, i, total](float pct, std::string ext) {
+                              auto *evt =
+                                  new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
+                              if (pct >= 0.0)
+                                evt->SetInt(static_cast<int>(pct));
+                              if (!ext.empty())
+                                evt->SetString(wxString{std::format(
+                                    "File {}/{} Downloading:  {}.{} {}%/100%",
+                                    i + 1, total, i + 1, ext, pct)});
+                              wxQueueEvent(evtTarget, evt);
+                            });
+
+        auto path = destPath / "raw" / std::format("{}.{}", i + 1, "mp4");
+        wxTheApp->CallAfter([filesPanel, i, path]() {
+          filesPanel->SetEntryPath(i, path);
+          filesPanel->AddFile(filesPanel->GetEntries()[i], path.string());
+        });
+      } catch (std::runtime_error &err) {
+        std::cout << "[Error] buildYtDlpCommand: " << err.what() << std::endl;
+      }
+    }
+
+    auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
+    evt->SetInt(100);
+    evt->SetString("Done!");
+    wxTheApp->CallAfter([destPath, setStatusText]() {
+      setStatusText(std::format("Successfully downloaded videos to \"{}\"!",
+                                destPath.string()));
+    });
+    wxQueueEvent(evtTarget, evt);
+  }).detach();
 }

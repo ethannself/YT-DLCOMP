@@ -3,11 +3,9 @@
 #include "MyApp.hpp"
 #include "interface.hpp"
 #include <chrono>
-#include <iostream>
 #include <stdexcept>
 #include <thread>
 #include <vector>
-#include <wx/app.h>
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/colour.h>
@@ -160,60 +158,14 @@ void MainFrame::OnEnter(wxCommandEvent &event) {
     DisplayError(err.what(), 3);
     return;
   }
-  try {
-    if (optResult.has_value()) {
-      settings.saveSettings();
-      this->filesPanel->SetEntries(optResult.value());
-      const auto destPath = settings.getDestPath();
-      const size_t total = this->filesPanel->GetEntries().size();
+  if (!optResult.has_value())
+    return;
 
-      std::thread([destPath, total, this]() {
-        for (size_t i = 0; i < total; ++i) {
-          try {
-            Entry entry = this->filesPanel->GetEntries()[i];
+  settings.saveSettings();
+  filesPanel->SetEntries(optResult.value());
 
-            std::string command = buildYtDlpCommand(i + 1, entry, destPath);
-            executeYtDLPCommand(
-                command.c_str(), std::to_string(i),
-                [this, i, total](float pct, std::string ext) {
-                  auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
-                  if (pct >= 0.0)
-                    evt->SetInt(static_cast<int>(pct));
-                  if (!ext.empty())
-                    evt->SetString(wxString{
-                        std::format("File {}/{} Downloading:  {}.{} {}%/100%",
-                                    i + 1, total, i + 1, ext, pct)});
-                  wxQueueEvent(this, evt);
-                });
-
-            auto path = destPath / "raw" / std::format("{}.{}", i + 1, "mp4");
-
-            wxTheApp->CallAfter([this, i, path]() {
-              this->filesPanel->SetEntryPath(i, path);
-              this->filesPanel->AddFile(this->filesPanel->GetEntries()[i],
-                                        path.string());
-            });
-
-          } catch (std::runtime_error &err) {
-            std::cout << "[Error] buildYtDlpCommand: " << err.what()
-                      << std::endl;
-          }
-        }
-
-        auto *evt = new wxThreadEvent(EVT_DOWNLOAD_PROGRESS);
-        evt->SetInt(100);
-        evt->SetString("Done!");
-        wxTheApp->CallAfter([this, destPath]() {
-          SetStatusText(std::format("Successfully downloaded videos to \"{}\"!",
-                                    destPath.string()));
-        });
-        wxQueueEvent(this, evt);
-      }).detach();
-    }
-  } catch (std::runtime_error &err) {
-    std::cout << "[Error] getResponses: " << err.what() << std::endl;
-    DisplayError(err.what(), 3);
-  }
+  DownloadEntries(filesPanel, this,
+                  [this](const std::string &text) { SetStatusText(text); });
 }
 void MainFrame::OnCreate(wxCommandEvent &event) {
   const std::vector<Entry> &entries = filesPanel->GetEntries();

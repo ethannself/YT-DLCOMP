@@ -20,6 +20,9 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
 // std::string buildEntryLabelCommand(const Entry &entry);
 void AddEntryLabels(const std::vector<Entry> &entries);
 void CombineEntries(const std::vector<Entry> &entries);
+
+void DownloadEntries(FilesPanel *filesPanel, wxEvtHandler *evtTarget,
+                     std::function<void(const std::string &)> setStatusText);
 int executeffmpegCommand(const std::string &command);
 void cleanup();
 
