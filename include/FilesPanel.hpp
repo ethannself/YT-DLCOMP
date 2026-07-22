@@ -13,7 +13,7 @@ public:
   void SetEntries(std::vector<Entry> entries) {
     this->entries = std::move(entries);
   }
-  const std::vector<Entry> &GetEntries() { return this->entries; }
+  std::vector<Entry> &GetEntries() { return this->entries; }
   void SetEntryPath(size_t index, const std::filesystem::path &path);
 
 private:

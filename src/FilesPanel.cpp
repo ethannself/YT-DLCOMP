@@ -13,7 +13,15 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-enum { COL_SUBMITTER = 0, COL_URL, COL_TIMESTAMP, COL_FILEPATH };
+enum {
+  COL_SUBMITTER = 0,
+  COL_URL,
+  COL_TIMESTAMP,
+  COL_FILEPATH,
+  COL_SONGNAME,
+  COL_ARTIST,
+  COL_VIEWS
+};
 FilesPanel::FilesPanel(wxWindow *parent) : wxPanel(parent) { BuildUI(); }
 
 void FilesPanel::BuildUI() {
@@ -43,31 +51,35 @@ void FilesPanel::BuildUI() {
   // grid->AppendRows(3, true);
   grid->SetColLabelValue(0, "Submitter");
   grid->SetColLabelValue(1, "Video URL");
-  grid->SetColLabelValue(2, "Timestamp");
+  grid->SetColLabelValue(2, "Time");
   grid->SetColLabelValue(3, "File Path");
+  grid->SetColLabelValue(4, "Title");
+  grid->SetColLabelValue(5, "Artist");
+  grid->SetColLabelValue(6, "Views");
+  // just for the empty corner col
+  grid->SetRowLabelSize(30);
 
+  grid->SetDefaultCellFitMode(wxGridFitMode::Clip());
   mainSizer->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
   mainSizer->Add(caution, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 10);
   mainSizer->Add(grid, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
   this->SetSizer(mainSizer);
 
-  Bind(wxEVT_SIZE, &FilesPanel::OnSize, this);
+  // Bind(wxEVT_SIZE, &FilesPanel::OnSize, this);
   grid->Bind(wxEVT_GRID_CELL_LEFT_DCLICK, &FilesPanel::OnCellDoubleClick, this);
-  CallAfter([this]() {
-    wxSizeEvent dummy;
-    this->OnSize(dummy);
-  });
+  CallAfter([this]() { this->ResizeGridColumns(); });
 }
-void FilesPanel::OnSize(wxSizeEvent &event) {
-  event.Skip();
-  CallAfter(&FilesPanel::ResizeGridColumns);
-}
+// void FilesPanel::OnSize(wxSizeEvent &event) {
+//   event.Skip();
+//   CallAfter(&FilesPanel::ResizeGridColumns);
+// }
 
 void FilesPanel::ResizeGridColumns() {
   if (!grid || grid->GetNumberCols() == 0)
     return;
 
-  static const double weights[COLUMN_COUNT] = {0.15, 0.35, 0.2, 0.3};
+  static const double weights[COLUMN_COUNT] = {0.15, 0.15, 0.05, 0.45,
+                                               0.10, 0.05, 0.05};
   // small margin to avoid clipping on resize
   const int margin = 4;
   int totalWidth =
@@ -82,6 +94,7 @@ void FilesPanel::ResizeGridColumns() {
     grid->SetColSize(i, w);
     assigned += w;
   }
+  // grid->Fit();
 }
 void FilesPanel::AddFile(const Entry &e, const std::string &path) {
   grid->AppendRows(1);
@@ -91,6 +104,9 @@ void FilesPanel::AddFile(const Entry &e, const std::string &path) {
   grid->SetCellValue(newRow, COL_URL, e.link);
   grid->SetCellValue(newRow, COL_TIMESTAMP, e.timestamp);
   grid->SetCellValue(newRow, COL_FILEPATH, path);
+  grid->SetCellValue(newRow, COL_SONGNAME, e.videoData.track);
+  grid->SetCellValue(newRow, COL_ARTIST, e.videoData.artist);
+  grid->SetCellValue(newRow, COL_VIEWS, std::to_string(e.videoData.views));
 }
 
 static void openFile(const std::filesystem::path &path) {

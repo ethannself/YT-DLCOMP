@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -97,8 +98,36 @@ std::string executeYtDLPCommand(
   }
   return result;
 }
+
+VideoMetadata getVideoMetadata(std::filesystem::path videoJsonFile) {
+  std::filesystem::path infoFile =
+      videoJsonFile.parent_path() /
+      (videoJsonFile.stem().string() + ".info.json");
+
+  std::ifstream ifs(infoFile);
+  if (!ifs.is_open()) {
+    throw std::runtime_error(std::format(
+        "[getVideoMetadata] Failed to open info file: {}", infoFile.string()));
+  }
+  nlohmann::json j;
+  try {
+    j = nlohmann::json::parse(ifs);
+  } catch (nlohmann::json::parse_error &e) {
+    throw std::runtime_error(std::format(
+        "[getVideoMetadata] Failed to parse yt-dlp output: {}", e.what()));
+  }
+
+  VideoMetadata data;
+
+  data.track = j.value("track", j.value("title", ""));
+  data.artist = j.value("artist", j.value("uploader", ""));
+  data.views = j.value("view_count", 0LL);
+  std::cout << data;
+  return data;
+}
 std::string buildYtDlpCommand(size_t index, const Entry &entry,
                               const std::filesystem::path &destPath) {
+  // std::cout << getVideoMetadata(entry.link);
   auto rawFilePath = destPath / "raw";
   std::filesystem::create_directories(rawFilePath);
   int minutes = 0, seconds = 0;
@@ -112,6 +141,7 @@ std::string buildYtDlpCommand(size_t index, const Entry &entry,
       "-f "
       "\"bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/"
       "bestvideo[height<=1080]+bestaudio/best[height<=1080]\" "
+      "--write-info-json "
       "-o \"{}/{}.%(ext)s\" "
       "--postprocessor-args \"ffmpeg:-ss {} -t 10 -c:v libx264 -c:a aac\" "
       "\"{}\" 2>&1",
@@ -176,8 +206,6 @@ std::optional<std::vector<Entry>> getResponses(std::string spreadsheetId,
 
         if (isValidYoutubeURL(link)) {
           Entry entry = Entry{row[1], sanitizeYoutubeURL(link), row[3]};
-          std::cout << "Username: " << entry.user << " Link: " << entry.link
-                    << " Timestamp: " << entry.timestamp << std::endl;
           entries.emplace_back(entry);
         }
       }
@@ -375,6 +403,7 @@ void DownloadEntries(FilesPanel *filesPanel, wxEvtHandler *evtTarget,
         auto path = destPath / "raw" / std::format("{}.{}", i + 1, "mp4");
         wxTheApp->CallAfter([filesPanel, i, path]() {
           filesPanel->SetEntryPath(i, path);
+          filesPanel->GetEntries()[i].videoData = getVideoMetadata(path);
           filesPanel->AddFile(filesPanel->GetEntries()[i], path.string());
         });
       } catch (std::runtime_error &err) {

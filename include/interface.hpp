@@ -25,5 +25,6 @@ void DownloadEntries(FilesPanel *filesPanel, wxEvtHandler *evtTarget,
                      std::function<void(const std::string &)> setStatusText);
 int executeffmpegCommand(const std::string &command);
 void cleanup();
+VideoMetadata getVideoMetadata(std::filesystem::path videoJsonFile);
 
 wxDECLARE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
