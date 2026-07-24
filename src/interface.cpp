@@ -256,9 +256,13 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
       "\"scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:("
       "ow-iw)/2:(oh-ih)/2,fps=30,"
       "drawtext=textfile='{}':fontsize=32:fontcolor=white:"
-      "x=(w-text_w)/2:y=h-2*th-62:box=1:boxcolor=black@0.5:boxborderw=8,"
+      "x=(w-text_w)/2:y=884:box=1:boxcolor=black@0.5:boxborderw=8,"
       "drawtext=textfile='{}':fontsize=28:fontcolor=white:"
-      "x=(w-text_w)/2:y=h-th-40:box=1:boxcolor=black@0.5:boxborderw=8\" "
+      "x=(w-text_w)/2:y=946:box=1:boxcolor=black@0.5:boxborderw=8,"
+      "drawtext=textfile='{}':fontsize=24:fontcolor=white:"
+      "x=(w-text_w)/2:y=998:box=1:boxcolor=black@0.5:boxborderw=8,"
+      "fade=t=in:st=0:d=1,fade=t=out:st=9:d=1\" "
+      "-af \"afade=t=in:st=0:d=1,afade=t=out:st=9:d=1\" "
       "-c:v libx264 -preset fast -crf 20 -c:a aac -ar 48000 -ac 2 -b:a 192k "
       "\"{}\"";
   if (entry.link.empty() || entry.path.empty() || entry.timestamp.empty() ||
@@ -275,13 +279,16 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
   std::filesystem::path outPath;
   outPath = outDir / entry.path.filename();
   // TODO: capture song name
-  std::string songLine = "SONGNAME";
+  std::string songLine = entry.videoData.artist + " - " + entry.videoData.track;
   std::string submitterLine = "Submitted by " + entry.user;
+  std::string viewsLine = std::to_string(entry.videoData.views) + " Plays";
 
   std::filesystem::path songTextPath =
       TEMP_DIR / ("song_" + entry.path.stem().string() + ".txt");
   std::filesystem::path submitterTextPath =
       TEMP_DIR / ("submitter_" + entry.path.stem().string() + ".txt");
+  std::filesystem::path viewsTextPath =
+      TEMP_DIR / ("views_" + entry.path.stem().string() + ".txt");
   auto writeTextFile = [](const std::filesystem::path &p,
                           const std::string &content) {
     std::ofstream txt(p, std::ios::binary);
@@ -293,14 +300,15 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
   };
   writeTextFile(songTextPath, songLine);
   writeTextFile(submitterTextPath, submitterLine);
+  writeTextFile(viewsTextPath, viewsLine);
   // handle escape characters in filepath
   std::string escapedSongFile = escapeFilterPath(songTextPath.string());
   std::string escapedSubmitterFile =
       escapeFilterPath(submitterTextPath.string());
-
+  std::string escapedViewsFile = escapeFilterPath(viewsTextPath.string());
   std::string cmd =
       std::format(templateCommand, entry.path.string(), escapedSongFile,
-                  escapedSubmitterFile, outPath.string());
+                  escapedSubmitterFile, escapedViewsFile, outPath.string());
   return cmd;
 }
 void AddEntryLabels(const std::vector<Entry> &entries) {
