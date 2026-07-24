@@ -30,8 +30,9 @@ const auto EXECUTABLE_PATH =
 const auto TEMP_DIR = EXECUTABLE_PATH / "temp";
 // Layout: destPath/raw (downloads), destPath/labelled (labelled clips),
 // destPath/final.mp4 (combined output)
-const std::string FILE_EXTENSION = "mp4";
-const std::string FINAL_FILE_NAME = std::format("final.{}", FILE_EXTENSION);
+const std::string DEFAULT_VIDEO_FILE_EXTENSION = "mp4";
+const std::string FINAL_FILE_NAME =
+    std::format("final.{}", DEFAULT_VIDEO_FILE_EXTENSION);
 
 wxDEFINE_EVENT(EVT_DOWNLOAD_PROGRESS, wxThreadEvent);
 
@@ -328,6 +329,22 @@ void AddEntryLabels(const std::vector<Entry> &entries) {
     }
   }
 }
+static double getDuration(const std::filesystem::path &video) {
+  const std::string command =
+      std::format("ffprobe -v error -show_entries format=duration "
+                  "-of default=noprint_wrappers=1:nokey=1 \"{}\"",
+                  video.string());
+
+  std::array<char, 256> buffer;
+  std::string result;
+
+  std::shared_ptr<FILE> pipe(_popen(command.c_str(), "r"), _pclose);
+  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+    result += buffer.data();
+  }
+
+  return std::stod(result);
+}
 void CombineEntries(const std::vector<Entry> &entries) {
   if (entries.empty())
     return;
@@ -342,28 +359,16 @@ void CombineEntries(const std::vector<Entry> &entries) {
         video, output, std::filesystem::copy_options::overwrite_existing);
     return;
   }
-
-  std::ofstream list(listFile);
-  if (!list) {
-    throw std::runtime_error("[CombineEntries] Failed to write concat file: " +
-                             listFile.string());
-  }
+  constexpr double transitionDuration = 1.0; // seconds
+  std::vector<std::filesystem::path> videos;
   for (const Entry &entry : entries) {
-    const auto video = labelledDir / entry.path.filename();
-    list << "file '" << video.string() << "'\n";
+    videos.push_back(labelledDir / entry.path.filename());
   }
-  list.close();
 
-  const std::string command =
-      std::format("ffmpeg -y -f concat -safe 0 -i \"{}\" -c copy \"{}\"",
-                  listFile.string(), output.string());
-  const int status = std::system(command.c_str());
-  if (status == -1) {
-    throw std::runtime_error("[CombineEntries] ffmpeg failed to initialize");
-  } else if (status != 0) {
-    std::cerr << std::format("[CombineEntries] ffmpeg exited with status {}\n",
-                             status)
-              << std::endl;
+  std::vector<double> durations;
+  durations.reserve(videos.size());
+  for (const auto &v : videos) {
+    durations.push_back(getDuration(v));
   }
 }
 void cleanup() {
