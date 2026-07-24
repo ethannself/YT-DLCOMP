@@ -16,6 +16,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -261,8 +262,8 @@ static std::string buildEntryLabelCommand(const Entry &entry) {
       "drawtext=textfile='{}':fontsize=28:fontcolor=white:"
       "x=(w-text_w)/2:y=946:box=1:boxcolor=black@0.5:boxborderw=8,"
       "drawtext=textfile='{}':fontsize=24:fontcolor=white:"
-      "x=(w-text_w)/2:y=998:box=1:boxcolor=black@0.5:boxborderw=8,"
-      "fade=t=in:st=0:d=1,fade=t=out:st=9:d=1\" "
+      "x=(w-text_w)/2:y=998:box=1:boxcolor=black@0.5:boxborderw=8\" "
+      // "fade=t=in:st=0:d=1,fade=t=out:st=9:d=1\" "
       "-af \"afade=t=in:st=0:d=1,afade=t=out:st=9:d=1\" "
       "-c:v libx264 -preset fast -crf 20 -c:a aac -ar 48000 -ac 2 -b:a 192k "
       "\"{}\"";
@@ -329,7 +330,7 @@ void AddEntryLabels(const std::vector<Entry> &entries) {
     }
   }
 }
-static double getDuration(const std::filesystem::path &video) {
+double getDuration(const std::filesystem::path &video) {
   const std::string command =
       std::format("ffprobe -v error -show_entries format=duration "
                   "-of default=noprint_wrappers=1:nokey=1 \"{}\"",
@@ -359,7 +360,7 @@ void CombineEntries(const std::vector<Entry> &entries) {
         video, output, std::filesystem::copy_options::overwrite_existing);
     return;
   }
-  constexpr double transitionDuration = 1.0; // seconds
+  constexpr double transitionDuration = 1.5; // seconds
   std::vector<std::filesystem::path> videos;
   for (const Entry &entry : entries) {
     videos.push_back(labelledDir / entry.path.filename());
@@ -369,6 +370,48 @@ void CombineEntries(const std::vector<Entry> &entries) {
   durations.reserve(videos.size());
   for (const auto &v : videos) {
     durations.push_back(getDuration(v));
+  }
+  std::ostringstream inputs;
+  for (const auto &v : videos) {
+    inputs << std::format(" -i \"{}\"", v.string());
+  }
+  std::ostringstream filter;
+  double cumulative = durations[0];
+
+  std::string prevVideoLabel = "[0:v]";
+  std::string prevAudioLabel = "[0:a]";
+
+  for (size_t i = 1; i < videos.size(); ++i) {
+    const double offset = cumulative - transitionDuration;
+    const std::string vOut = std::format("[v{}]", i);
+    const std::string aOut = std::format("[a{}]", i);
+
+    filter << std::format(
+        "{}[{}:v]xfade=transition=fade:duration={}:offset={}{};",
+        prevVideoLabel, i, transitionDuration, offset, vOut);
+    filter << std::format("{}[{}:a]acrossfade=d={}{};", prevAudioLabel, i,
+                          transitionDuration, aOut);
+    prevVideoLabel = vOut;
+    prevAudioLabel = aOut;
+    cumulative += durations[i] - transitionDuration;
+  }
+  const std::string filterComplex = filter.str();
+
+  const std::string command =
+      std::format("ffmpeg -y{} -filter_complex \"{}\" -map \"{}\" -map \"{}\" "
+                  "-c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p "
+                  "-movflags +faststart -c:a aac -ar 48000 -ac 2 -b:a 192k "
+                  "\"{}\"",
+                  inputs.str(), filterComplex, prevVideoLabel, prevAudioLabel,
+                  output.string());
+
+  const int status = std::system(command.c_str());
+
+  if (status == -1) {
+    throw std::runtime_error("[CombineEntries] ffmpeg failed to init");
+  } else if (status != 0) {
+    std::cerr << std::format("[CombineEntries] ffmpeg exited with status {}\n",
+                             status);
   }
 }
 void cleanup() {
